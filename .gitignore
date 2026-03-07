@@ -137,3 +137,12 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Firebase service account keys (never commit these)
+*serviceAccountKey*.json
+
+# React build output
+client/build/
+
+# Firebase emulator data
+.firebase/
