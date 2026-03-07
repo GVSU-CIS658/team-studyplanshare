@@ -50,6 +50,7 @@ Many students struggle with organizing coursework and identifying effective stud
 - Node.js v20+
 - npm
 - Firebase CLI: `npm install -g firebase-tools`
+- Java 17+ JRE (required for Firestore emulator): `sudo apt-get install -y openjdk-21-jre-headless`
 
 ### Installation
 
