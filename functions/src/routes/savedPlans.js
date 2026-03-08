@@ -4,17 +4,21 @@ const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
 
 const db = admin.firestore();
-
+const { FieldValue } = require("firebase-admin/firestore");
 // GET /savedPlans - Get current user's saved plans
 router.get("/", verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
-    const snapshot = await db.collection("savedPlans")
+    const snapshot = await db
+      .collection("savedPlans")
       .where("userId", "==", uid)
       .orderBy("createdAt", "desc")
       .get();
 
-    const savedPlans = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const savedPlans = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
     return res.status(200).json(savedPlans);
   } catch (error) {
     console.error("Error fetching saved plans:", error);
@@ -38,7 +42,8 @@ router.post("/", verifyToken, async (req, res) => {
     }
 
     // Prevent duplicate saves
-    const existing = await db.collection("savedPlans")
+    const existing = await db
+      .collection("savedPlans")
       .where("userId", "==", uid)
       .where("planId", "==", planId)
       .limit(1)
@@ -51,7 +56,7 @@ router.post("/", verifyToken, async (req, res) => {
     const saveData = {
       userId: uid,
       planId,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     };
 
     const docRef = await db.collection("savedPlans").add(saveData);
@@ -76,7 +81,9 @@ router.delete("/:saveId", verifyToken, async (req, res) => {
     }
 
     if (saveDoc.data().userId !== uid) {
-      return res.status(403).json({ error: "Forbidden: You do not own this saved plan" });
+      return res
+        .status(403)
+        .json({ error: "Forbidden: You do not own this saved plan" });
     }
 
     await saveRef.delete();

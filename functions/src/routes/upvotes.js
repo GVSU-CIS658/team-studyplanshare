@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
 
 const db = admin.firestore();
-
+const { FieldValue } = require("firebase-admin/firestore");
 // POST /upvotes/:planId - Upvote a study plan
 router.post("/:planId", verifyToken, async (req, res) => {
   try {
@@ -26,8 +26,12 @@ router.post("/:planId", verifyToken, async (req, res) => {
 
     // Atomic batch: create upvote record + increment counter
     const batch = db.batch();
-    batch.set(upvoteRef, { createdAt: admin.firestore.FieldValue.serverTimestamp() });
-    batch.update(planRef, { upvoteCount: admin.firestore.FieldValue.increment(1) });
+    batch.set(upvoteRef, {
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    batch.update(planRef, {
+      upvoteCount: admin.firestore.FieldValue.increment(1),
+    });
     await batch.commit();
 
     return res.status(201).json({ message: "Plan upvoted successfully" });
@@ -54,7 +58,7 @@ router.delete("/:planId", verifyToken, async (req, res) => {
     // Atomic batch: delete upvote record + decrement counter
     const batch = db.batch();
     batch.delete(upvoteRef);
-    batch.update(planRef, { upvoteCount: admin.firestore.FieldValue.increment(-1) });
+    batch.update(planRef, { upvoteCount: FieldValue.increment(-1) });
     await batch.commit();
 
     return res.status(200).json({ message: "Upvote removed successfully" });
