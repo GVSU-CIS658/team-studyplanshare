@@ -63,6 +63,11 @@ Many students struggle with organizing coursework and identifying effective stud
    ```
    cd client && npm install
    ```
+4. Set up frontend environment variables:
+   ```
+   cp client/.env.example client/.env
+   ```
+   Fill in the values in `client/.env` with your Firebase project credentials, found in the Firebase console under **Project Settings → General → Your apps → SDK setup and configuration**.
 
 ### Running Locally
 
