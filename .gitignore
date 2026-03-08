@@ -141,6 +141,9 @@ vite.config.ts.timestamp-*
 # Firebase service account keys (never commit these)
 *serviceAccountKey*.json
 
+# Local notes
+NOTES.md
+
 # React build output
 client/build/
 
