@@ -1,8 +1,20 @@
-import React, { FormEvent, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
 import { REDIRECT_KEY } from "../router";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function RegisterPage() {
   const { register } = useAuth();
@@ -25,7 +37,7 @@ function RegisterPage() {
     [email, password, confirmPassword, passwordMismatch, isSubmitting],
   );
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!canSubmit) return;
@@ -47,73 +59,88 @@ function RegisterPage() {
   };
 
   return (
-    <section style={{ maxWidth: 420, margin: "3rem auto", padding: "1rem" }}>
-      <h1>Create Account</h1>
+    <section className="flex min-h-screen items-center justify-center p-6 md:p-10">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Create your account</CardTitle>
+          <CardDescription>
+            Enter your details below to create your StudyPlanShare account.
+          </CardDescription>
+          <CardAction>
+            <Link
+              to="/login"
+              className={buttonVariants({ variant: "link", size: "sm" })}
+            >
+              Login
+            </Link>
+          </CardAction>
+        </CardHeader>
 
-      {toast && (
-        <div
-          role="status"
-          style={{
-            marginBottom: "1rem",
-            padding: "0.75rem",
-            border: "1px solid #f5c2c7",
-            background: "#f8d7da",
-            color: "#842029",
-            borderRadius: 8,
-          }}
-        >
-          {toast}
-        </div>
-      )}
+        <CardContent>
+          <form onSubmit={onSubmit}>
+            <div className="flex flex-col gap-6">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  placeholder="m@example.com"
+                />
+              </div>
 
-      <form onSubmit={onSubmit}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          style={{ display: "block", width: "100%", marginBottom: "0.75rem" }}
-        />
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password (min 6 chars)</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
 
-        <label htmlFor="password">Password (min 6 chars)</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          minLength={6}
-          style={{ display: "block", width: "100%", marginBottom: "0.75rem" }}
-        />
+              <div className="grid gap-2">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                />
+              </div>
+            </div>
 
-        <label htmlFor="confirmPassword">Confirm Password</label>
-        <input
-          id="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          required
-          style={{ display: "block", width: "100%", marginBottom: "0.5rem" }}
-        />
-        {passwordMismatch && (
-          <div style={{ color: "#842029", marginBottom: "0.75rem" }}>
-            Passwords do not match.
-          </div>
-        )}
+            {passwordMismatch && (
+              <p className="mt-4 text-sm text-destructive">
+                Passwords do not match.
+              </p>
+            )}
 
-        <button type="submit" disabled={!canSubmit}>
-          {isSubmitting ? "Creating account..." : "Register"}
-        </button>
-      </form>
+            {toast && (
+              <output
+                aria-live="polite"
+                className="mt-4 block text-sm text-destructive"
+              >
+                {toast}
+              </output>
+            )}
 
-      <p style={{ marginTop: "1rem" }}>
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
+            <CardFooter className="mt-6 flex-col gap-2 p-0">
+              <Button type="submit" disabled={!canSubmit} className="w-full">
+                {isSubmitting ? "Creating account..." : "Register"}
+              </Button>
+            </CardFooter>
+          </form>
+        </CardContent>
+      </Card>
     </section>
   );
 }

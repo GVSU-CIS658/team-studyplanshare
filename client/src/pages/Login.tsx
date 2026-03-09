@@ -3,6 +3,18 @@ import { Link } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
 import { REDIRECT_KEY } from "../router";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function LoginPage() {
   const { login } = useAuth();
@@ -38,56 +50,77 @@ function LoginPage() {
   };
 
   return (
-    <section style={{ maxWidth: 420, margin: "3rem auto", padding: "1rem" }}>
-      <h1>Login</h1>
+    <section className="flex min-h-screen items-center justify-center p-6 md:p-10">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Login to your account</CardTitle>
+          <CardDescription>
+            Enter your email and password below to login to your account.
+          </CardDescription>
+          <CardAction>
+            <Link
+              to="/register"
+              className={buttonVariants({ variant: "link", size: "sm" })}
+            >
+              Sign up
+            </Link>
+          </CardAction>
+        </CardHeader>
 
-      {toast && (
-        <output
-          style={{
-            marginBottom: "1rem",
-            padding: "0.75rem",
-            border: "1px solid #f5c2c7",
-            background: "#f8d7da",
-            color: "#842029",
-            borderRadius: 8,
-            display: "block",
-          }}
-        >
-          {toast}
-        </output>
-      )}
+        <CardContent>
+          <form onSubmit={onSubmit}>
+            <div className="flex flex-col gap-6">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  placeholder="m@example.com"
+                />
+              </div>
 
-      <form onSubmit={onSubmit}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          style={{ display: "block", width: "100%", marginBottom: "0.75rem" }}
-        />
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </div>
+            </div>
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          style={{ display: "block", width: "100%", marginBottom: "1rem" }}
-        />
+            {toast && (
+              <output
+                aria-live="polite"
+                className="mt-4 block text-sm text-destructive"
+              >
+                {toast}
+              </output>
+            )}
 
-        <button type="submit" disabled={!canSubmit}>
-          {isSubmitting ? "Logging in..." : "Login"}
-        </button>
-      </form>
-
-      <p style={{ marginTop: "1rem" }}>
-        New here? <Link to="/register">Create an account</Link>
-      </p>
+            <CardFooter className="mt-6 flex-col gap-2 p-0">
+              <Button type="submit" disabled={!canSubmit} className="w-full">
+                {isSubmitting ? "Logging in..." : "Login"}
+              </Button>
+            </CardFooter>
+          </form>
+        </CardContent>
+      </Card>
     </section>
   );
 }

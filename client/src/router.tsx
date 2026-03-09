@@ -62,6 +62,7 @@ const browseRoute = createRoute({
   },
   component: () => <div> Browse(protected)</div>,
 });
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
