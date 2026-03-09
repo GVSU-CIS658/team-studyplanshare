@@ -10,6 +10,7 @@ import React, {
 import {
   AuthUser,
   getCurrentIdToken,
+  loginWithEmail,
   logout as authLogout,
   onAuthStateChangedListener,
   registerWithEmail,
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return unsubscribe;
   }, []);
   const login = useCallback(async (email: string, password: string) => {
-    const nextUser = await registerWithEmail(email, password);
+    const nextUser = await loginWithEmail(email, password);
     const token = await getCurrentIdToken();
     setUser(nextUser);
     setIdToken(token);

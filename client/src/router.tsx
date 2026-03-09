@@ -10,6 +10,7 @@ import {
 import type { AuthUser } from "./services/authService";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
+import HomePage from "./pages/Home";
 
 type RouterContext = {
   auth: {
@@ -35,7 +36,16 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: () => <div>StudyPlanShare</div>,
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: HomePage,
 });
 
 const browseRoute = createRoute({
@@ -47,8 +57,8 @@ const browseRoute = createRoute({
         REDIRECT_KEY,
         `${location.pathname}${location.searchStr}`,
       );
+      throw redirect({ to: "/login" });
     }
-    throw redirect({ to: "/login" });
   },
   component: () => <div> Browse(protected)</div>,
 });
@@ -64,12 +74,12 @@ const registerRoute = createRoute({
   component: RegisterPage,
 });
 
-const routeTree = rootRoute.addChildren({
+const routeTree = rootRoute.addChildren([
   homeRoute,
   browseRoute,
   loginRoute,
   registerRoute,
-});
+]);
 
 export const router = createRouter({
   routeTree,
