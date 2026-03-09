@@ -36,9 +36,9 @@ function RegisterPage() {
     try {
       await register(email.trim(), password);
 
-      const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/browse";
+      const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/";
       sessionStorage.removeItem(REDIRECT_KEY);
-      window.location.assign(redirectTarget);
+      globalThis.location.assign(redirectTarget);
     } catch (error) {
       setToast(getApiErrorMessage(error));
     } finally {

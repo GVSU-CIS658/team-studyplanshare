@@ -27,7 +27,7 @@ function LoginPage() {
     try {
       await login(email.trim(), password);
 
-      const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/browse";
+      const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/";
       sessionStorage.removeItem(REDIRECT_KEY);
       globalThis.location.assign(redirectTarget);
     } catch (error) {
