@@ -1,5 +1,7 @@
 export async function getAllStudyPlans(): Promise<StudyPlan[]> {
-  const response = await apiClient.get<StudyPlan[]>("/studyPlans?limit=50");
+  const response = await apiClient.get<StudyPlan[]>(
+    "/studyPlans?limit=50&sortBy=popular",
+  );
   return response.data;
 }
 import apiClient from "./apiClient";
@@ -13,6 +15,7 @@ export interface StudyPlan {
   imageUrl?: string | null;
   userId: string;
   upvoteCount: number;
+  hasUpvoted?: boolean;
   createdAt?: unknown;
 }
 
@@ -45,4 +48,12 @@ export async function updateStudyPlan(
 
 export async function deleteStudyPlan(planId: string): Promise<void> {
   await apiClient.delete(`/studyPlans/${planId}`);
+}
+
+export async function upvoteStudyPlan(planId: string): Promise<void> {
+  await apiClient.post(`/upvotes/${planId}`);
+}
+
+export async function removeStudyPlanUpvote(planId: string): Promise<void> {
+  await apiClient.delete(`/upvotes/${planId}`);
 }
