@@ -5,8 +5,8 @@ const { verifyToken } = require("../middleware/auth");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
-// GET /studyPlans - Get all public study plans (filter by course, sort, paginate)
-router.get("/", verifyToken, async (req, res) => {
+// GET /studyPlans - Public: Get all public study plans (filter by course, sort, paginate)
+router.get("/", async (req, res) => {
   try {
     const { courseName, sortBy, limit = 10, startAfter } = req.query;
     let query = db.collection("studyPlans");
@@ -61,8 +61,8 @@ router.get("/my", verifyToken, async (req, res) => {
   }
 });
 
-// GET /studyPlans/:planId - Get a single study plan
-router.get("/:planId", verifyToken, async (req, res) => {
+// GET /studyPlans/:planId - Public: Get a single study plan
+router.get("/:planId", async (req, res) => {
   try {
     const { planId } = req.params;
     const planDoc = await db.collection("studyPlans").doc(planId).get();

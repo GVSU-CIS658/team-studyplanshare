@@ -11,6 +11,7 @@ import type { AuthUser } from "./services/authService";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import HomePage from "./pages/Home";
+import StudyPlansPage from "./pages/StudyPlans";
 
 type RouterContext = {
   auth: {
@@ -63,6 +64,21 @@ const browseRoute = createRoute({
   component: () => <div> Browse(protected)</div>,
 });
 
+const studyPlansRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/study-plans",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: StudyPlansPage,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -78,6 +94,7 @@ const registerRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute,
   browseRoute,
+  studyPlansRoute,
   loginRoute,
   registerRoute,
 ]);
