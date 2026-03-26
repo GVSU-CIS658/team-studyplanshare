@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
 
 const db = admin.firestore();
-
+const { FieldValue } = require("firebase-admin/firestore");
 // GET /studyPlans - Get all public study plans (filter by course, sort, paginate)
 router.get("/", verifyToken, async (req, res) => {
   try {
@@ -24,7 +24,10 @@ router.get("/", verifyToken, async (req, res) => {
     query = query.limit(parseInt(limit));
 
     if (startAfter) {
-      const startAfterDoc = await db.collection("studyPlans").doc(startAfter).get();
+      const startAfterDoc = await db
+        .collection("studyPlans")
+        .doc(startAfter)
+        .get();
       if (startAfterDoc.exists) {
         query = query.startAfter(startAfterDoc);
       }
@@ -44,7 +47,8 @@ router.get("/", verifyToken, async (req, res) => {
 router.get("/my", verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
-    const snapshot = await db.collection("studyPlans")
+    const snapshot = await db
+      .collection("studyPlans")
       .where("userId", "==", uid)
       .orderBy("createdAt", "desc")
       .get();
@@ -82,7 +86,8 @@ router.post("/", verifyToken, async (req, res) => {
 
     if (!title || !courseName || !semester || !description) {
       return res.status(400).json({
-        error: "Missing required fields: title, courseName, semester, description",
+        error:
+          "Missing required fields: title, courseName, semester, description",
       });
     }
 
@@ -94,7 +99,7 @@ router.post("/", verifyToken, async (req, res) => {
       imageUrl: imageUrl || null,
       userId: uid,
       upvoteCount: 0,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     };
 
     const docRef = await db.collection("studyPlans").add(newPlan);
@@ -120,7 +125,9 @@ router.put("/:planId", verifyToken, async (req, res) => {
     }
 
     if (planDoc.data().userId !== uid) {
-      return res.status(403).json({ error: "Forbidden: You do not own this study plan" });
+      return res
+        .status(403)
+        .json({ error: "Forbidden: You do not own this study plan" });
     }
 
     const updates = {};
@@ -152,7 +159,9 @@ router.delete("/:planId", verifyToken, async (req, res) => {
     }
 
     if (planDoc.data().userId !== uid) {
-      return res.status(403).json({ error: "Forbidden: You do not own this study plan" });
+      return res
+        .status(403)
+        .json({ error: "Forbidden: You do not own this study plan" });
     }
 
     await planRef.delete();

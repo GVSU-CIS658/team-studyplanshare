@@ -4,6 +4,7 @@ const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
 
 const db = admin.firestore();
+const { FieldValue } = require("firebase-admin/firestore");
 
 // POST /users - Create user record in Firestore after Firebase Auth registration
 router.post("/", verifyToken, async (req, res) => {
@@ -18,7 +19,7 @@ router.post("/", verifyToken, async (req, res) => {
 
     await userRef.set({
       email,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     return res.status(201).json({ message: "User created successfully" });

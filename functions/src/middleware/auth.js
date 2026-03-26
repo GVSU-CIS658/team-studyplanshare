@@ -14,7 +14,9 @@ async function verifyToken(req, res, next) {
     req.user = decodedToken;
     next();
   } catch (error) {
-    return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+    return res
+      .status(401)
+      .json({ error: "Unauthorized: Invalid or expired token" });
   }
 }
 
