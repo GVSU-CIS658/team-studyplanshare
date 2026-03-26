@@ -37,6 +37,15 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
   component: HomePage,
 });
 

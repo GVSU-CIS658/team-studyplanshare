@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
       query = query.orderBy("createdAt", "desc");
     }
 
-    query = query.limit(Number.parseInt(limit));
+    query = query.limit(parseInt(limit));
 
     if (startAfter) {
       const startAfterDoc = await db
