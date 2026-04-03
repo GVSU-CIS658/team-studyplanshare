@@ -12,6 +12,7 @@ import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import HomePage from "./pages/Home";
 import StudyPlansPage from "./pages/StudyPlans";
+import ProfilePage from "./pages/Profile";
 
 type RouterContext = {
   auth: {
@@ -37,15 +38,6 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
   component: HomePage,
 });
 
@@ -79,6 +71,21 @@ const studyPlansRoute = createRoute({
   component: StudyPlansPage,
 });
 
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: ProfilePage,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -95,6 +102,7 @@ const routeTree = rootRoute.addChildren([
   homeRoute,
   browseRoute,
   studyPlansRoute,
+  profileRoute,
   loginRoute,
   registerRoute,
 ]);

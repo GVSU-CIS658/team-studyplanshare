@@ -1,4 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import Layout from "../components/Layout";
+import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
 import {
   createStudyPlan,
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ErrorToast } from "@/components/ui/error-toast";
 import { Link } from "@tanstack/react-router";
 
 const emptyForm: StudyPlanInput = {
@@ -31,6 +34,7 @@ const emptyForm: StudyPlanInput = {
 };
 
 function StudyPlansPage() {
+  const { user, loading: authLoading } = useAuth();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -59,6 +63,8 @@ function StudyPlansPage() {
   }, [form, busy]);
 
   const loadPlans = async () => {
+    if (!user) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -72,8 +78,9 @@ function StudyPlansPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
     loadPlans();
-  }, []);
+  }, [authLoading, user?.uid]);
 
   const onChange =
     (field: keyof StudyPlanInput) =>
@@ -152,21 +159,22 @@ function StudyPlansPage() {
   };
 
   return (
-    <section className="flex flex-col w-full max-w-4xl gap-6 p-6 mx-auto md:p-10">
-      <Card>
+    <Layout>
+      <section className="flex flex-col w-full max-w-4xl gap-6 p-6 mx-auto md:p-10">
+        <ErrorToast message={error} onClose={() => setError(null)} />
+        <Card>
         <CardHeader>
-          <CardTitle>
-            {isEditing ? "Update study plan" : "Create study plan"}
-          </CardTitle>
+          <CardTitle>{isEditing ? "Edit plan" : "Create a new plan"}</CardTitle>
           <CardDescription>
-            Save, update, and delete your own study plans.
+            This is your personal workspace for creating and managing your own
+            study plans.
           </CardDescription>
           <CardAction>
             <Link
               to="/"
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Back Home
+              Go to Home
             </Link>
           </CardAction>
         </CardHeader>
@@ -230,12 +238,6 @@ function StudyPlansPage() {
               />
             </div>
 
-            {error && (
-              <output aria-live="polite" className="text-sm text-destructive">
-                {error}
-              </output>
-            )}
-
             <CardFooter className="flex justify-end gap-2 px-0 pb-0">
               {isEditing && (
                 <Button
@@ -253,68 +255,70 @@ function StudyPlansPage() {
             </CardFooter>
           </form>
         </CardContent>
-      </Card>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>My study plans</CardTitle>
-          <CardDescription>
-            Your plans are private to your account ownership.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          {loading && (
-            <p className="text-sm text-muted-foreground">Loading plans...</p>
-          )}
+        <Card>
+          <CardHeader>
+            <CardTitle>My Plans</CardTitle>
+            <CardDescription>
+              Review, update, or delete the study plans you have created.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {(loading || authLoading) && (
+              <p className="text-sm text-muted-foreground">Loading plans...</p>
+            )}
 
-          {!loading && plans.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No plans yet. Create your first study plan above.
-            </p>
-          )}
+            {!loading && !authLoading && plans.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No plans yet. Create your first study plan above.
+              </p>
+            )}
 
-          {!loading &&
-            plans.map((plan) => (
-              <article key={plan.id} className="p-4 border rounded-md">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="text-base font-semibold">{plan.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {plan.courseName} • {plan.semester}
+            {!loading &&
+              !authLoading &&
+              plans.map((plan) => (
+                <article key={plan.id} className="p-4 border rounded-md">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">{plan.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {plan.courseName} • {plan.semester}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEdit(plan)}
+                        disabled={busy}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onDelete(plan.id)}
+                        disabled={busy}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm">{plan.description}</p>
+                  {plan.imageUrl ? (
+                    <p className="mt-2 text-xs break-all text-muted-foreground">
+                      Image: {plan.imageUrl}
                     </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit(plan)}
-                      disabled={busy}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => onDelete(plan.id)}
-                      disabled={busy}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-                <p className="mt-3 text-sm">{plan.description}</p>
-                {plan.imageUrl ? (
-                  <p className="mt-2 text-xs break-all text-muted-foreground">
-                    Image: {plan.imageUrl}
-                  </p>
-                ) : null}
-              </article>
-            ))}
-        </CardContent>
-      </Card>
-    </section>
+                  ) : null}
+                </article>
+              ))}
+          </CardContent>
+        </Card>
+      </section>
+    </Layout>
   );
 }
 

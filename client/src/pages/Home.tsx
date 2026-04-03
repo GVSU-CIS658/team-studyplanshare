@@ -1,18 +1,26 @@
-import React from "react";
-import { Link } from "@tanstack/react-router";
+import React, { useEffect, useState } from "react";
+import { Link, useRouter } from "@tanstack/react-router";
 import {
   ArrowRight,
   BookOpen,
-  CalendarRange,
-  CheckCircle2,
+  ImageIcon,
   LogOut,
-  NotebookPen,
-  Users,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
+import { getApiErrorMessage } from "../services/apiClient";
+import {
+  getAllStudyPlans,
+  removeStudyPlanUpvote,
+  StudyPlan,
+  upvoteStudyPlan,
+} from "../services/studyPlanService";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ErrorToast } from "@/components/ui/error-toast";
 import {
   Card,
   CardContent,
@@ -21,143 +29,337 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const highlights = [
-  {
-    title: "Plan by semester",
-    description:
-      "Keep each course organized with one simple place for goals, milestones, and deadlines.",
-    icon: CalendarRange,
-  },
-  {
-    title: "Track what matters",
-    description:
-      "Write short study notes, break work into manageable pieces, and stay focused each week.",
-    icon: NotebookPen,
-  },
-  {
-    title: "Share with your team",
-    description:
-      "Compare plans with classmates and build a more consistent routine together.",
-    icon: Users,
-  },
-];
-
-const checklist = [
-  "Create a study plan for each course",
-  "Set weekly goals before assignments pile up",
-  "Keep your semester progress easy to review",
-];
-
 function HomePage() {
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, logout, loading: authLoading } = useAuth();
+  const [plans, setPlans] = useState<StudyPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
+
   const firstName =
     user?.name?.split(" ").find(Boolean) ||
     user?.email?.split("@")[0] ||
     "there";
 
+  const loadPlans = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await getAllStudyPlans();
+      setPlans(data);
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPlans();
+  }, [user?.uid]);
+
   const handleLogout = async () => {
-    await logout();
-    globalThis.location.assign("/login");
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      await router.navigate({ to: "/login" });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleUpvote = async (plan: StudyPlan) => {
+    if (authLoading) return;
+
+    if (!user) {
+      await router.navigate({ to: "/login" });
+      return;
+    }
+
+    if (busyPlanId) return;
+
+    setBusyPlanId(plan.id);
+    setError(null);
+
+    try {
+      if (plan.hasUpvoted) {
+        await removeStudyPlanUpvote(plan.id);
+        setPlans((prev) =>
+          prev.map((item) =>
+            item.id === plan.id
+              ? {
+                  ...item,
+                  hasUpvoted: false,
+                  upvoteCount: Math.max(0, (item.upvoteCount || 0) - 1),
+                }
+              : item,
+          ),
+        );
+        return;
+      }
+
+      await upvoteStudyPlan(plan.id);
+      setPlans((prev) =>
+        prev.map((item) =>
+          item.id === plan.id
+            ? {
+                ...item,
+                hasUpvoted: true,
+                upvoteCount: (item.upvoteCount || 0) + 1,
+              }
+            : item,
+        ),
+      );
+    } catch (voteError) {
+      const message = getApiErrorMessage(voteError);
+      if (message.toLowerCase().includes("already upvoted")) {
+        setPlans((prev) =>
+          prev.map((item) =>
+            item.id === plan.id ? { ...item, hasUpvoted: true } : item,
+          ),
+        );
+        await loadPlans();
+      } else {
+        setError(message);
+      }
+    } finally {
+      setBusyPlanId(null);
+    }
+  };
+
+  const handleDownvote = async (plan: StudyPlan) => {
+    if (authLoading) return;
+
+    if (!user) {
+      await router.navigate({ to: "/login" });
+      return;
+    }
+
+    if (busyPlanId) return;
+
+    setBusyPlanId(plan.id);
+    setError(null);
+
+    try {
+      await removeStudyPlanUpvote(plan.id);
+      setPlans((prev) =>
+        prev.map((item) =>
+          item.id === plan.id
+            ? {
+                ...item,
+                hasUpvoted: false,
+                upvoteCount: Math.max(0, (item.upvoteCount || 0) - 1),
+              }
+            : item,
+        ),
+      );
+    } catch (voteError) {
+      const message = getApiErrorMessage(voteError);
+      if (message.toLowerCase().includes("upvote not found")) {
+        setPlans((prev) =>
+          prev.map((item) =>
+            item.id === plan.id ? { ...item, hasUpvoted: false } : item,
+          ),
+        );
+        await loadPlans();
+      } else {
+        setError(message);
+      }
+    } finally {
+      setBusyPlanId(null);
+    }
   };
 
   return (
     <Layout>
-      <section className="relative px-6 py-8 overflow-hidden border shadow-sm rounded-xl border-border/60 bg-linear-to-br from-sky-50 via-white to-emerald-50 md:px-10 md:py-12">
-        <div className="absolute w-32 h-32 rounded-full -left-10 top-8 bg-sky-200/40 blur-3xl" />
-        <div className="absolute bottom-0 w-40 h-40 rounded-full -right-12 bg-emerald-200/40 blur-3xl" />
-
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div className="max-w-2xl space-y-6">
-            <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-sky-700 uppercase">
-              Semester planning made simple
+      <ErrorToast message={error} onClose={() => setError(null)} />
+      <section className="space-y-6">
+        <Card className="overflow-hidden border-border/70 bg-linear-to-br from-sky-50 via-white to-emerald-50 shadow-sm">
+          <CardHeader className="gap-5 p-5 sm:p-6 lg:grid lg:grid-cols-[1.3fr_auto] lg:items-end">
+            <div className="space-y-3">
+              <Badge
+                variant="outline"
+                className="border-sky-200 bg-white/80 text-sky-700"
+              >
+                Shared study plans
+              </Badge>
+              <div className="space-y-2">
+                <CardTitle className="text-3xl leading-tight text-slate-900 sm:text-4xl">
+                  Welcome back, {firstName}
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-sm leading-6 text-slate-600">
+                  Browse the latest plans your classmates shared, open your own
+                  study plans, and keep everything easy to find.
+                </CardDescription>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-muted-foreground">
-                Welcome back, {firstName}.
-              </p>
-              <h1 className="max-w-xl text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-                Build a calm, clear home base for your study plans.
-              </h1>
-              <p className="max-w-xl text-base leading-7 text-slate-600 md:text-lg">
-                StudyPlanShare helps your group stay organized without feeling
-                cluttered. Create plans, track your semester, and keep everyone
-                moving in the same direction.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Link
                 to="/study-plans"
-                className={buttonVariants({ size: "lg" }) + " px-5"}
+                className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
               >
-                Open my study plans
-                <ArrowRight className="w-4 h-4 ml-1" />
+                My study plans
+                <ArrowRight className="h-4 w-4" />
               </Link>
-              <Button variant="outline" size="lg" onClick={handleLogout}>
-                <LogOut className="w-4 h-4" />
-                Logout
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full sm:w-auto"
+              >
+                <LogOut className="h-4 w-4" />
+                {isLoggingOut ? "Logging out..." : "Logout"}
               </Button>
             </div>
+          </CardHeader>
+        </Card>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              {checklist.map((item) => (
-                <div
-                  key={item}
-                  className="flex items-start gap-3 p-4 border rounded-2xl border-white/80 bg-white/70 backdrop-blur"
-                >
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" />
-                  <p className="text-sm leading-6 text-slate-700">{item}</p>
-                </div>
-              ))}
-            </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Shared plans
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {plans.length} plan{plans.length === 1 ? "" : "s"} available
+            </p>
           </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <BookOpen className="h-4 w-4" />
+            Simple list with optional plan images
+          </div>
+        </div>
 
-          <Card className="shadow-lg border-white/80 bg-white/85 backdrop-blur">
-            <CardHeader className="space-y-3">
-              <div className="flex items-center justify-center w-12 h-12 text-white rounded-2xl bg-slate-900">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <CardTitle className="text-2xl text-slate-900">
-                A better start to the semester
-              </CardTitle>
-              <CardDescription className="text-sm leading-6 text-slate-600">
-                Keep the homepage polished and useful with a short overview of
-                what the app helps students do best.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-5 text-white rounded-2xl bg-slate-900">
-                <p className="text-sm text-slate-300">Main goal</p>
-                <p className="mt-2 text-xl font-semibold">
-                  Stay organized and finish the semester strong.
-                </p>
-              </div>
-              <div className="grid gap-3">
-                {highlights.map(({ title, description, icon: Icon }) => (
-                  <div
-                    key={title}
-                    className="p-4 bg-white border rounded-2xl border-slate-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-sky-100 text-sky-700">
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h2 className="font-semibold text-slate-900">
-                          {title}
-                        </h2>
-                        <p className="text-sm leading-6 text-slate-600">
-                          {description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {(loading || authLoading) && (
+          <Card>
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              Loading shared study plans...
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {!loading && plans.length === 0 && (
+          <Card>
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              No shared study plans yet.
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading && !authLoading && plans.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {plans.map((plan) => {
+              const hasUpvoted = Boolean(plan.hasUpvoted);
+              const isBusy = busyPlanId === plan.id;
+
+              return (
+              <Card key={plan.id} className="overflow-hidden border-border/70">
+                <div className="flex h-full flex-col">
+                  {plan.imageUrl ? (
+                    <img
+                      src={plan.imageUrl}
+                      alt={plan.title}
+                      className="h-48 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-40 items-center justify-center bg-slate-100 text-slate-400">
+                      <div className="flex items-center gap-2 text-sm">
+                        <ImageIcon className="h-4 w-4" />
+                        No image
+                      </div>
+                    </div>
+                  )}
+
+                  <CardContent className="flex flex-1 flex-col gap-4 p-5">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-sky-700">
+                        <span>{plan.courseName}</span>
+                        <span className="text-slate-300">•</span>
+                        <span>{plan.semester}</span>
+                      </div>
+                      <h3 className="text-xl font-semibold text-slate-900">
+                        {plan.title}
+                      </h3>
+                      <p className="text-sm leading-6 text-slate-600">
+                        {plan.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-auto space-y-3 rounded-xl bg-slate-50 px-3 py-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-slate-700">
+                          {plan.upvoteCount ?? 0} upvotes
+                        </p>
+                        <Link
+                          to="/study-plans"
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                          })}
+                        >
+                          Open plans
+                        </Link>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={hasUpvoted ? "default" : "outline"}
+                          disabled={isBusy || authLoading}
+                          onClick={() => handleUpvote(plan)}
+                          className={hasUpvoted ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                        >
+                          <ThumbsUp
+                            className={
+                              hasUpvoted
+                                ? "h-4 w-4 text-white"
+                                : "h-4 w-4 text-emerald-600"
+                            }
+                          />
+                          Upvote
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy || authLoading}
+                          onClick={() => handleDownvote(plan)}
+                          className={
+                            hasUpvoted
+                              ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                              : ""
+                          }
+                        >
+                          <ThumbsDown
+                            className={
+                              hasUpvoted
+                                ? "h-4 w-4 text-rose-600"
+                                : "h-4 w-4 text-slate-400"
+                            }
+                          />
+                          Downvote
+                        </Button>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        {user
+                          ? "For now, downvote removes your upvote."
+                          : "Login to upvote or downvote."}
+                      </p>
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+            )})}
+          </div>
+        )}
       </section>
     </Layout>
   );
