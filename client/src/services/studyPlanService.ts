@@ -13,6 +13,7 @@ export interface StudyPlan {
   imageUrl?: string | null;
   userId: string;
   upvoteCount: number;
+  hasUpvoted?: boolean;
   createdAt?: unknown;
 }
 
@@ -45,4 +46,12 @@ export async function updateStudyPlan(
 
 export async function deleteStudyPlan(planId: string): Promise<void> {
   await apiClient.delete(`/studyPlans/${planId}`);
+}
+
+export async function upvoteStudyPlan(planId: string): Promise<void> {
+  await apiClient.post(`/upvotes/${planId}`);
+}
+
+export async function removeStudyPlanUpvote(planId: string): Promise<void> {
+  await apiClient.delete(`/upvotes/${planId}`);
 }
