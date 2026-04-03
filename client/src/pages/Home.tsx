@@ -28,6 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatWelcomeName } from "@/lib/utils";
 
 function HomePage() {
   const router = useRouter();
@@ -39,8 +40,8 @@ function HomePage() {
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
 
   const firstName =
-    user?.name?.split(" ").find(Boolean) ||
-    user?.email?.split("@")[0] ||
+    formatWelcomeName(user?.name) ||
+    formatWelcomeName(user?.email?.split("@")[0]) ||
     "there";
 
   const loadPlans = async () => {
@@ -179,7 +180,7 @@ function HomePage() {
     <Layout>
       <ErrorToast message={error} onClose={() => setError(null)} />
       <section className="space-y-6">
-        <Card className="overflow-hidden border-border/70 bg-linear-to-br from-sky-50 via-white to-emerald-50 shadow-sm">
+        <Card className="overflow-hidden shadow-sm border-border/70 bg-linear-to-br from-sky-50 via-white to-emerald-50">
           <CardHeader className="gap-5 p-5 sm:p-6 lg:grid lg:grid-cols-[1.3fr_auto] lg:items-end">
             <div className="space-y-3">
               <Badge
@@ -205,7 +206,7 @@ function HomePage() {
                 className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
               >
                 My study plans
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="w-4 h-4" />
               </Link>
               <Button
                 variant="outline"
@@ -214,7 +215,7 @@ function HomePage() {
                 disabled={isLoggingOut}
                 className="w-full sm:w-auto"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="w-4 h-4" />
                 {isLoggingOut ? "Logging out..." : "Logout"}
               </Button>
             </div>
@@ -231,7 +232,7 @@ function HomePage() {
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <BookOpen className="h-4 w-4" />
+            <BookOpen className="w-4 h-4" />
             Simple list with optional plan images
           </div>
         </div>
@@ -259,105 +260,113 @@ function HomePage() {
               const isBusy = busyPlanId === plan.id;
 
               return (
-              <Card key={plan.id} className="overflow-hidden border-border/70">
-                <div className="flex h-full flex-col">
-                  {plan.imageUrl ? (
-                    <img
-                      src={plan.imageUrl}
-                      alt={plan.title}
-                      className="h-48 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 items-center justify-center bg-slate-100 text-slate-400">
-                      <div className="flex items-center gap-2 text-sm">
-                        <ImageIcon className="h-4 w-4" />
-                        No image
+                <Card
+                  key={plan.id}
+                  className="overflow-hidden border-border/70"
+                >
+                  <div className="flex flex-col h-full">
+                    {plan.imageUrl ? (
+                      <img
+                        src={plan.imageUrl}
+                        alt={plan.title}
+                        className="object-cover w-full h-48"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-40 bg-slate-100 text-slate-400">
+                        <div className="flex items-center gap-2 text-sm">
+                          <ImageIcon className="w-4 h-4" />
+                          No image
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <CardContent className="flex flex-1 flex-col gap-4 p-5">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-sky-700">
-                        <span>{plan.courseName}</span>
-                        <span className="text-slate-300">•</span>
-                        <span>{plan.semester}</span>
-                      </div>
-                      <h3 className="text-xl font-semibold text-slate-900">
-                        {plan.title}
-                      </h3>
-                      <p className="text-sm leading-6 text-slate-600">
-                        {plan.description}
-                      </p>
-                    </div>
-
-                    <div className="mt-auto space-y-3 rounded-xl bg-slate-50 px-3 py-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-slate-700">
-                          {plan.upvoteCount ?? 0} upvotes
+                    <CardContent className="flex flex-col flex-1 gap-4 p-5">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-sky-700">
+                          <span>{plan.courseName}</span>
+                          <span className="text-slate-300">•</span>
+                          <span>{plan.semester}</span>
+                        </div>
+                        <h3 className="text-xl font-semibold text-slate-900">
+                          {plan.title}
+                        </h3>
+                        <p className="text-sm leading-6 text-slate-600">
+                          {plan.description}
                         </p>
-                        <Link
-                          to="/study-plans"
-                          className={buttonVariants({
-                            variant: "outline",
-                            size: "sm",
-                          })}
-                        >
-                          Open plans
-                        </Link>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={hasUpvoted ? "default" : "outline"}
-                          disabled={isBusy || authLoading}
-                          onClick={() => handleUpvote(plan)}
-                          className={hasUpvoted ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-                        >
-                          <ThumbsUp
-                            className={
-                              hasUpvoted
-                                ? "h-4 w-4 text-white"
-                                : "h-4 w-4 text-emerald-600"
-                            }
-                          />
-                          Upvote
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={isBusy || authLoading}
-                          onClick={() => handleDownvote(plan)}
-                          className={
-                            hasUpvoted
-                              ? "border-rose-200 text-rose-600 hover:bg-rose-50"
-                              : ""
-                          }
-                        >
-                          <ThumbsDown
-                            className={
-                              hasUpvoted
-                                ? "h-4 w-4 text-rose-600"
-                                : "h-4 w-4 text-slate-400"
-                            }
-                          />
-                          Downvote
-                        </Button>
-                      </div>
+                      <div className="px-3 py-3 mt-auto space-y-3 rounded-xl bg-slate-50">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-700">
+                            {plan.upvoteCount ?? 0} upvotes
+                          </p>
+                          <Link
+                            to="/study-plans"
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                            })}
+                          >
+                            Open plans
+                          </Link>
+                        </div>
 
-                      <p className="text-xs text-muted-foreground">
-                        {user
-                          ? "For now, downvote removes your upvote."
-                          : "Login to upvote or downvote."}
-                      </p>
-                    </div>
-                  </CardContent>
-                </div>
-              </Card>
-            )})}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={hasUpvoted ? "default" : "outline"}
+                            disabled={isBusy || authLoading}
+                            onClick={() => handleUpvote(plan)}
+                            className={
+                              hasUpvoted
+                                ? "bg-emerald-600 hover:bg-emerald-700"
+                                : ""
+                            }
+                          >
+                            <ThumbsUp
+                              className={
+                                hasUpvoted
+                                  ? "h-4 w-4 text-white"
+                                  : "h-4 w-4 text-emerald-600"
+                              }
+                            />
+                            Upvote
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy || authLoading}
+                            onClick={() => handleDownvote(plan)}
+                            className={
+                              hasUpvoted
+                                ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                                : ""
+                            }
+                          >
+                            <ThumbsDown
+                              className={
+                                hasUpvoted
+                                  ? "h-4 w-4 text-rose-600"
+                                  : "h-4 w-4 text-slate-400"
+                              }
+                            />
+                            Downvote
+                          </Button>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          {user
+                            ? "For now, downvote removes your upvote."
+                            : "Login to upvote or downvote."}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
