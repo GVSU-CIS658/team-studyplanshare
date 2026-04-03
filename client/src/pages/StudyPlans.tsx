@@ -25,6 +25,8 @@ import { Label } from "@/components/ui/label";
 import { ErrorToast } from "@/components/ui/error-toast";
 import { Link } from "@tanstack/react-router";
 
+const DEFAULT_PLAN_IMAGE = "/images/studyplan.png";
+
 const emptyForm: StudyPlanInput = {
   title: "",
   courseName: "",
@@ -307,6 +309,14 @@ function StudyPlansPage() {
                       </Button>
                     </div>
                   </div>
+                  <img
+                    src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
+                    alt={plan.title}
+                    onError={(event) => {
+                      event.currentTarget.src = DEFAULT_PLAN_IMAGE;
+                    }}
+                    className="mt-3 h-44 w-full rounded-md object-cover sm:h-52"
+                  />
                   <p className="mt-3 text-sm">{plan.description}</p>
                   {plan.imageUrl ? (
                     <p className="mt-2 text-xs break-all text-muted-foreground">

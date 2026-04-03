@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  BookOpen,
-  ImageIcon,
-  LogOut,
-  ThumbsDown,
-  ThumbsUp,
-} from "lucide-react";
+import { ArrowRight, BookOpen, LogOut, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
@@ -29,6 +22,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatWelcomeName } from "@/lib/utils";
+
+const DEFAULT_PLAN_IMAGE = "/images/studyplan.png";
 
 function HomePage() {
   const router = useRouter();
@@ -265,20 +260,14 @@ function HomePage() {
                   className="overflow-hidden border-border/70"
                 >
                   <div className="flex flex-col h-full">
-                    {plan.imageUrl ? (
-                      <img
-                        src={plan.imageUrl}
-                        alt={plan.title}
-                        className="object-cover w-full h-48"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-40 bg-slate-100 text-slate-400">
-                        <div className="flex items-center gap-2 text-sm">
-                          <ImageIcon className="w-4 h-4" />
-                          No image
-                        </div>
-                      </div>
-                    )}
+                    <img
+                      src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
+                      alt={plan.title}
+                      onError={(event) => {
+                        event.currentTarget.src = DEFAULT_PLAN_IMAGE;
+                      }}
+                      className="h-44 w-full object-cover sm:h-52 lg:h-56"
+                    />
 
                     <CardContent className="flex flex-col flex-1 gap-4 p-5">
                       <div className="space-y-2">
