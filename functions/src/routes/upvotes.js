@@ -27,10 +27,10 @@ router.post("/:planId", verifyToken, async (req, res) => {
     // Atomic batch: create upvote record + increment counter
     const batch = db.batch();
     batch.set(upvoteRef, {
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
     batch.update(planRef, {
-      upvoteCount: admin.firestore.FieldValue.increment(1),
+      upvoteCount: FieldValue.increment(1),
     });
     await batch.commit();
 

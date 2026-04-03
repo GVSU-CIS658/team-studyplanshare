@@ -50,10 +50,18 @@ router.get("/my", verifyToken, async (req, res) => {
     const snapshot = await db
       .collection("studyPlans")
       .where("userId", "==", uid)
-      .orderBy("createdAt", "desc")
       .get();
 
-    const plans = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const plans = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => {
+        const aMillis =
+          typeof a.createdAt?.toMillis === "function" ? a.createdAt.toMillis() : 0;
+        const bMillis =
+          typeof b.createdAt?.toMillis === "function" ? b.createdAt.toMillis() : 0;
+        return bMillis - aMillis;
+      });
+
     return res.status(200).json(plans);
   } catch (error) {
     console.error("Error fetching user study plans:", error);
