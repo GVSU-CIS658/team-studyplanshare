@@ -20,4 +20,23 @@ async function verifyToken(req, res, next) {
   }
 }
 
-module.exports = { verifyToken };
+async function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    req.user = null;
+    return next();
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken;
+  } catch (error) {
+    req.user = null;
+  }
+  next();
+}
+
+module.exports = { verifyToken, optionalAuth };
