@@ -1,10 +1,9 @@
-import React from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, Link } from "@tanstack/react-router";
 import { LogIn } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import Avatar from "./ui/avatar";
 import { Button, buttonVariants } from "./ui/button";
-import { Link } from "@tanstack/react-router";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +17,11 @@ import {
 export default function Layout({ children }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+  const pathname = router.state.location.pathname;
+  const isAuthScreen =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password";
 
   const handleLogout = async () => {
     await logout();
@@ -42,19 +46,20 @@ export default function Layout({ children }) {
               {user.name || user.email || "Account"}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.navigate({ to: "/profile" })}>
+            <DropdownMenuItem
+              onClick={() => router.navigate({ to: "/profile" })}
+            >
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={handleLogout}
-            >
+            <DropdownMenuItem variant="destructive" onClick={handleLogout}>
               Logout
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     );
+  } else if (isAuthScreen) {
+    navContent = null;
   } else {
     navContent = (
       <Link to="/login" aria-label="Login or Signup">
@@ -63,7 +68,7 @@ export default function Layout({ children }) {
           size="sm"
           className="h-10 rounded-2xl border-0 bg-slate-900 px-4 text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-slate-800"
         >
-          <LogIn className="h-4 w-4" />
+          <LogIn className="w-4 h-4" />
           <span className="font-medium">Sign In</span>
         </Button>
       </Link>
@@ -73,14 +78,14 @@ export default function Layout({ children }) {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 w-full border-b border-border bg-white/90 backdrop-blur dark:bg-background/90">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <div className="flex items-center justify-between w-full max-w-6xl gap-4 px-4 py-4 mx-auto sm:px-6">
           <div className="flex items-center gap-6">
             <Link to="/" className="text-lg font-bold tracking-tight">
               StudyPlanShare
             </Link>
             <nav
               aria-label="Primary navigation"
-              className="hidden items-center gap-2 md:flex"
+              className="items-center hidden gap-2 md:flex"
             >
               <Link
                 to="/"
@@ -100,7 +105,7 @@ export default function Layout({ children }) {
         </div>
       </header>
       <main
-        className="mx-auto flex-1 w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8"
+        className="flex-1 w-full max-w-6xl px-4 py-6 mx-auto sm:px-6 sm:py-8"
         tabIndex={-1}
         id="main-content"
       >

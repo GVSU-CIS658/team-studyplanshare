@@ -3,9 +3,10 @@ import { router } from "./router";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionKey } = useAuth();
   return (
     <RouterProvider
+      key={sessionKey}
       router={router}
       context={{
         auth: {
