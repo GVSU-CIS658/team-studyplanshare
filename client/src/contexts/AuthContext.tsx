@@ -9,7 +9,10 @@ import React, {
 
 import {
   AuthUser,
+  completeRedirectAuth,
   getCurrentIdToken,
+  loginWithGithub,
+  loginWithGoogle,
   loginWithEmail,
   logout as authLogout,
   onAuthStateChangedListener,
@@ -19,63 +22,88 @@ import {
 export interface AuthContextValue {
   user: AuthUser | null;
   idToken: string | null;
+  sessionKey: string;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  loginWithGithub: () => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-const AUTH_TOKEN_KEY = "sps.auth.idToken";
-const AUTH_UID_KEY = "sps.auth.uid";
+const LEGACY_AUTH_STORAGE_KEYS = ["sps.auth.idToken", "sps.auth.uid"];
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const persistAuth = (user: AuthUser | null, token: string | null) => {
-  if (user && token) {
-    localStorage.setItem(AUTH_UID_KEY, user.uid);
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    return;
-  }
-  localStorage.removeItem(AUTH_UID_KEY);
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [idToken, setIdToken] = useState<string | null>(
-    localStorage.getItem(AUTH_TOKEN_KEY),
-  );
+  const [idToken, setIdToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    LEGACY_AUTH_STORAGE_KEYS.forEach((key) => {
+      localStorage.removeItem(key);
+    });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
     const unsubscribe = onAuthStateChangedListener(async (nextUser) => {
+      if (!active) return;
+
       setUser(nextUser);
 
       if (nextUser) {
         const token = await getCurrentIdToken();
+        if (!active) return;
         setIdToken(token);
-        persistAuth(nextUser, token);
       } else {
         setIdToken(null);
-        persistAuth(null, null);
       }
+
       setLoading(false);
     });
-    return unsubscribe;
+
+    void completeRedirectAuth()
+      .then(async (redirectUser) => {
+        if (!active || !redirectUser) return;
+
+        setUser(redirectUser);
+        const token = await getCurrentIdToken();
+        if (!active) return;
+        setIdToken(token);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Failed to complete redirect auth", error);
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
   const login = useCallback(async (email: string, password: string) => {
     const nextUser = await loginWithEmail(email, password);
     const token = await getCurrentIdToken();
     setUser(nextUser);
     setIdToken(token);
-    persistAuth(nextUser, token);
+  }, []);
+
+  const loginWithGoogleAccount = useCallback(async () => {
+    await loginWithGoogle();
+  }, []);
+
+  const loginWithGithubAccount = useCallback(async () => {
+    await loginWithGithub();
   }, []);
 
   const logout = useCallback(async () => {
     await authLogout();
     setUser(null);
     setIdToken(null);
-    persistAuth(null, null);
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
@@ -83,18 +111,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const token = await getCurrentIdToken(true);
     setUser(nextUser);
     setIdToken(token);
-    persistAuth(nextUser, token);
   }, []);
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       idToken,
+      sessionKey: user?.uid ?? "guest",
       loading,
       login,
+      loginWithGithub: loginWithGithubAccount,
+      loginWithGoogle: loginWithGoogleAccount,
       logout,
       register,
     }),
-    [user, idToken, register, login, logout, loading],
+    [
+      user,
+      idToken,
+      user?.uid,
+      register,
+      login,
+      loginWithGithubAccount,
+      loginWithGoogleAccount,
+      logout,
+      loading,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

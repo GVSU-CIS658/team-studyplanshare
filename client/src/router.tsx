@@ -10,6 +10,7 @@ import {
 import type { AuthUser } from "./services/authService";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
+import ForgotPasswordPage from "./pages/ForgotPassword";
 import HomePage from "./pages/Home";
 import StudyPlansPage from "./pages/StudyPlans";
 import ProfilePage from "./pages/Profile";
@@ -98,6 +99,12 @@ const registerRoute = createRoute({
   component: RegisterPage,
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/forgot-password",
+  component: ForgotPasswordPage,
+});
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   browseRoute,
@@ -105,6 +112,7 @@ const routeTree = rootRoute.addChildren([
   profileRoute,
   loginRoute,
   registerRoute,
+  forgotPasswordRoute,
 ]);
 
 export const router = createRouter({

@@ -1,8 +1,12 @@
 import {
+  GithubAuthProvider,
+  GoogleAuthProvider,
   User,
   createUserWithEmailAndPassword,
+  getRedirectResult,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signInWithRedirect,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -23,15 +27,23 @@ export function mapFirebaseUserToAuthUser(user: User): AuthUser {
   };
 }
 
+async function finalizeAuthenticatedUser(user: User) {
+  try {
+    await ensureUserRecord();
+  } catch (error) {
+    console.error("Failed to ensure user record after authentication", error);
+  }
+
+  return mapFirebaseUserToAuthUser(user);
+}
+
 export async function registerWithEmail(email: string, password: string) {
   const userCredential = await createUserWithEmailAndPassword(
     auth,
     email,
     password,
   );
-  const user = userCredential.user;
-  await ensureUserRecord();
-  return mapFirebaseUserToAuthUser(user);
+  return finalizeAuthenticatedUser(userCredential.user);
 }
 
 export async function loginWithEmail(email: string, password: string) {
@@ -40,11 +52,36 @@ export async function loginWithEmail(email: string, password: string) {
     email,
     password,
   );
-  const user = userCredential.user;
-  await ensureUserRecord();
-  return mapFirebaseUserToAuthUser(user);
+  return finalizeAuthenticatedUser(userCredential.user);
 }
 
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+
+  await signInWithRedirect(auth, provider);
+}
+
+export async function loginWithGithub() {
+  const provider = new GithubAuthProvider();
+  provider.addScope("read:user");
+  provider.addScope("user:email");
+
+  await signInWithRedirect(auth, provider);
+}
+
+export async function completeRedirectAuth() {
+  const userCredential = await getRedirectResult(auth);
+  if (userCredential?.user) {
+    return finalizeAuthenticatedUser(userCredential.user);
+  }
+
+  if (auth.currentUser) {
+    return finalizeAuthenticatedUser(auth.currentUser);
+  }
+
+  return null;
+}
 export async function logout() {
   await signOut(auth);
 }
