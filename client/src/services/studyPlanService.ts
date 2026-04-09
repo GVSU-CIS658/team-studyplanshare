@@ -1,8 +1,11 @@
+import apiClient from "./apiClient";
+
 export async function getAllStudyPlans(): Promise<StudyPlan[]> {
   const response = await apiClient.get<StudyPlan[]>("/studyPlans?limit=50");
   return response.data;
 }
-import apiClient from "./apiClient";
+
+export type StudyPlanVote = "up" | "down" | null;
 
 export interface StudyPlan {
   id: string;
@@ -13,6 +16,9 @@ export interface StudyPlan {
   imageUrl?: string | null;
   userId: string;
   upvoteCount: number;
+  downvoteCount?: number;
+  score?: number;
+  myVote?: StudyPlanVote;
   hasUpvoted?: boolean;
   createdAt?: unknown;
 }

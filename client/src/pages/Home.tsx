@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, LogOut, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  LogOut,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
@@ -9,6 +15,7 @@ import {
   getAllStudyPlans,
   removeStudyPlanUpvote,
   StudyPlan,
+  StudyPlanVote,
   upvoteStudyPlan,
 } from "../services/studyPlanService";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,6 +31,37 @@ import {
 import { formatWelcomeName } from "@/lib/utils";
 
 const DEFAULT_PLAN_IMAGE = "/images/studyplan.png";
+
+function getVoteState(plan: StudyPlan): StudyPlanVote {
+  if (plan.myVote === "up" || plan.myVote === "down") {
+    return plan.myVote;
+  }
+
+  if (plan.hasUpvoted) {
+    return "up";
+  }
+
+  return null;
+}
+
+function getVoteMessage(
+  user: typeof import("@/hooks/useAuth").useAuth extends () => infer R
+    ? R extends { user: infer U }
+      ? U
+      : never
+    : never,
+  hasDownvoted: boolean,
+): string {
+  if (!user) {
+    return "Login to upvote or downvote.";
+  }
+
+  if (hasDownvoted) {
+    return "The current response includes your vote state.";
+  }
+
+  return "For now, downvote removes your upvote.";
+}
 
 function HomePage() {
   const router = useRouter();
@@ -251,8 +289,12 @@ function HomePage() {
         {!loading && !authLoading && plans.length > 0 && (
           <div className="grid gap-4 lg:grid-cols-2">
             {plans.map((plan) => {
-              const hasUpvoted = Boolean(plan.hasUpvoted);
+              const voteState = getVoteState(plan);
+              const hasUpvoted = voteState === "up";
+              const hasDownvoted = voteState === "down";
               const isBusy = busyPlanId === plan.id;
+
+              const voteMessage = getVoteMessage(user, hasDownvoted);
 
               return (
                 <Card
@@ -266,7 +308,7 @@ function HomePage() {
                       onError={(event) => {
                         event.currentTarget.src = DEFAULT_PLAN_IMAGE;
                       }}
-                      className="h-44 w-full object-cover sm:h-52 lg:h-56"
+                      className="object-cover w-full h-44 sm:h-52 lg:h-56"
                     />
 
                     <CardContent className="flex flex-col flex-1 gap-4 p-5">
@@ -287,7 +329,7 @@ function HomePage() {
                       <div className="px-3 py-3 mt-auto space-y-3 rounded-xl bg-slate-50">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-700">
-                            {plan.upvoteCount ?? 0} upvotes
+                            Score {plan.score ?? plan.upvoteCount ?? 0}
                           </p>
                           <Link
                             to="/study-plans"
@@ -329,14 +371,14 @@ function HomePage() {
                             disabled={isBusy || authLoading}
                             onClick={() => handleDownvote(plan)}
                             className={
-                              hasUpvoted
+                              hasDownvoted || hasUpvoted
                                 ? "border-rose-200 text-rose-600 hover:bg-rose-50"
                                 : ""
                             }
                           >
                             <ThumbsDown
                               className={
-                                hasUpvoted
+                                hasDownvoted || hasUpvoted
                                   ? "h-4 w-4 text-rose-600"
                                   : "h-4 w-4 text-slate-400"
                               }
@@ -345,10 +387,13 @@ function HomePage() {
                           </Button>
                         </div>
 
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{plan.upvoteCount ?? 0} upvotes</span>
+                          <span>{plan.downvoteCount ?? 0} downvotes</span>
+                        </div>
+
                         <p className="text-xs text-muted-foreground">
-                          {user
-                            ? "For now, downvote removes your upvote."
-                            : "Login to upvote or downvote."}
+                          {voteMessage}
                         </p>
                       </div>
                     </CardContent>

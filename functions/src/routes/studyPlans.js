@@ -6,7 +6,7 @@ const { verifyToken, optionalAuth } = require("../middleware/auth");
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
 // GET /studyPlans - Get all public study plans (filter by course, sort, paginate)
-router.get("/", verifyToken, async (req, res) => {
+router.get("/", optionalAuth, async (req, res) => {
   try {
     const { courseName, sortBy, limit = 10, startAfter } = req.query;
     let query = db.collection("studyPlans");
