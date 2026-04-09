@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import Layout from "../components/Layout";
+import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
 import { getUserProfile, type UserProfile } from "../services/userService";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ const emptyDraft: StudentProfileDraft = {
 };
 
 function ProfilePage() {
+  const { user, sessionKey } = useAuth();
   const [draft, setDraft] = useState<StudentProfileDraft>(emptyDraft);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,11 +43,23 @@ function ProfilePage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const storageKey = useMemo(
-    () => (profile ? `sps.profile.draft.${profile.id}` : null),
-    [profile],
+    () => {
+      const scopedUserId = profile?.id || user?.uid;
+      return scopedUserId ? `sps.profile.draft.${scopedUserId}` : null;
+    },
+    [profile?.id, user?.uid],
   );
 
   useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setDraft(emptyDraft);
+      setLoading(false);
+      setError(null);
+      setNotice(null);
+      return;
+    }
+
     const loadProfile = async () => {
       setLoading(true);
       setError(null);
@@ -61,7 +75,12 @@ function ProfilePage() {
     };
 
     loadProfile();
-  }, []);
+  }, [sessionKey, user]);
+
+  useEffect(() => {
+    setDraft(emptyDraft);
+    setNotice(null);
+  }, [sessionKey]);
 
   useEffect(() => {
     if (!storageKey) return;

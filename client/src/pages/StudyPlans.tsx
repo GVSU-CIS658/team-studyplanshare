@@ -36,7 +36,7 @@ const emptyForm: StudyPlanInput = {
 };
 
 function StudyPlansPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, sessionKey } = useAuth();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -80,9 +80,27 @@ function StudyPlansPage() {
   };
 
   useEffect(() => {
+    if (!user) {
+      setPlans([]);
+      setLoading(false);
+      setBusy(false);
+      setError(null);
+      setEditingPlanId(null);
+      setForm(emptyForm);
+      return;
+    }
+
     if (authLoading) return;
     loadPlans();
-  }, [authLoading, user?.uid]);
+  }, [authLoading, sessionKey, user]);
+
+  useEffect(() => {
+    setPlans([]);
+    setEditingPlanId(null);
+    setForm(emptyForm);
+    setError(null);
+    setBusy(false);
+  }, [sessionKey]);
 
   const onChange =
     (field: keyof StudyPlanInput) =>
