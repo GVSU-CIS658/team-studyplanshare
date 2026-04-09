@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
-const { verifyToken } = require("../middleware/auth");
+const { verifyToken, optionalAuth } = require("../middleware/auth");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
-// GET /studyPlans - Public: Get all public study plans (filter by course, sort, paginate)
-router.get("/", async (req, res) => {
+// GET /studyPlans - Get all public study plans (filter by course, sort, paginate)
+router.get("/", verifyToken, async (req, res) => {
   try {
     const { courseName, sortBy, limit = 10, startAfter } = req.query;
     let query = db.collection("studyPlans");
@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
     }
 
     if (sortBy === "popular") {
-      query = query.orderBy("upvoteCount", "desc");
+      query = query.orderBy("score", "desc");
     } else {
       query = query.orderBy("createdAt", "desc");
     }
@@ -34,7 +34,33 @@ router.get("/", async (req, res) => {
     }
 
     const snapshot = await query.get();
-    const plans = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const plans = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      downvoteCount: doc.data().downvoteCount || 0,
+      score: doc.data().score || 0,
+      myVote: null,
+    }));
+
+    // If authenticated, look up the user's votes for these plans
+    if (req.user && plans.length > 0) {
+      const uid = req.user.uid;
+      const voteReads = plans.map((plan) =>
+        db
+          .collection("studyPlans")
+          .doc(plan.id)
+          .collection("votes")
+          .doc(uid)
+          .get(),
+      );
+      const voteDocs = await Promise.all(voteReads);
+
+      voteDocs.forEach((voteDoc, i) => {
+        if (voteDoc.exists) {
+          plans[i].myVote = voteDoc.data().vote;
+        }
+      });
+    }
 
     return res.status(200).json(plans);
   } catch (error) {
@@ -56,9 +82,13 @@ router.get("/my", verifyToken, async (req, res) => {
       .map((doc) => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => {
         const aMillis =
-          typeof a.createdAt?.toMillis === "function" ? a.createdAt.toMillis() : 0;
+          typeof a.createdAt?.toMillis === "function"
+            ? a.createdAt.toMillis()
+            : 0;
         const bMillis =
-          typeof b.createdAt?.toMillis === "function" ? b.createdAt.toMillis() : 0;
+          typeof b.createdAt?.toMillis === "function"
+            ? b.createdAt.toMillis()
+            : 0;
         return bMillis - aMillis;
       });
 
@@ -107,6 +137,8 @@ router.post("/", verifyToken, async (req, res) => {
       imageUrl: imageUrl || null,
       userId: uid,
       upvoteCount: 0,
+      downvoteCount: 0,
+      score: 0,
       createdAt: FieldValue.serverTimestamp(),
     };
 

@@ -12,11 +12,11 @@ app.use(express.json());
 const usersRouter = require("./src/routes/users");
 const studyPlansRouter = require("./src/routes/studyPlans");
 const savedPlansRouter = require("./src/routes/savedPlans");
-const upvotesRouter = require("./src/routes/upvotes");
+const votesRouter = require("./src/routes/votes");
 
 app.use("/users", usersRouter);
 app.use("/studyPlans", studyPlansRouter);
 app.use("/savedPlans", savedPlansRouter);
-app.use("/upvotes", upvotesRouter);
+app.use("/votes", votesRouter);
 
 exports.api = functions.https.onRequest(app);
