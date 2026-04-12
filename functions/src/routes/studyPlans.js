@@ -5,8 +5,7 @@ const { verifyToken, optionalAuth } = require("../middleware/auth");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
-// GET /studyPlans - Public: Get all study plans (filter by course, sort, paginate)
-// If auth token is present, includes myVote per plan
+// GET /studyPlans - Get all public study plans (filter by course, sort, paginate)
 router.get("/", optionalAuth, async (req, res) => {
   try {
     const { courseName, sortBy, limit = 10, startAfter } = req.query;
@@ -47,7 +46,12 @@ router.get("/", optionalAuth, async (req, res) => {
     if (req.user && plans.length > 0) {
       const uid = req.user.uid;
       const voteReads = plans.map((plan) =>
-        db.collection("studyPlans").doc(plan.id).collection("votes").doc(uid).get(),
+        db
+          .collection("studyPlans")
+          .doc(plan.id)
+          .collection("votes")
+          .doc(uid)
+          .get(),
       );
       const voteDocs = await Promise.all(voteReads);
 
@@ -72,10 +76,22 @@ router.get("/my", verifyToken, async (req, res) => {
     const snapshot = await db
       .collection("studyPlans")
       .where("userId", "==", uid)
-      .orderBy("createdAt", "desc")
       .get();
 
-    const plans = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const plans = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => {
+        const aMillis =
+          typeof a.createdAt?.toMillis === "function"
+            ? a.createdAt.toMillis()
+            : 0;
+        const bMillis =
+          typeof b.createdAt?.toMillis === "function"
+            ? b.createdAt.toMillis()
+            : 0;
+        return bMillis - aMillis;
+      });
+
     return res.status(200).json(plans);
   } catch (error) {
     console.error("Error fetching user study plans:", error);
@@ -83,8 +99,8 @@ router.get("/my", verifyToken, async (req, res) => {
   }
 });
 
-// GET /studyPlans/:planId - Get a single study plan
-router.get("/:planId", verifyToken, async (req, res) => {
+// GET /studyPlans/:planId - Public: Get a single study plan
+router.get("/:planId", async (req, res) => {
   try {
     const { planId } = req.params;
     const planDoc = await db.collection("studyPlans").doc(planId).get();

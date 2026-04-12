@@ -10,7 +10,10 @@ import {
 import type { AuthUser } from "./services/authService";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
+import ForgotPasswordPage from "./pages/ForgotPassword";
 import HomePage from "./pages/Home";
+import StudyPlansPage from "./pages/StudyPlans";
+import ProfilePage from "./pages/Profile";
 
 type RouterContext = {
   auth: {
@@ -36,15 +39,6 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
   component: HomePage,
 });
 
@@ -62,6 +56,37 @@ const browseRoute = createRoute({
   },
   component: () => <div> Browse(protected)</div>,
 });
+
+const studyPlansRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/study-plans",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: StudyPlansPage,
+});
+
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: ProfilePage,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -74,11 +99,20 @@ const registerRoute = createRoute({
   component: RegisterPage,
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/forgot-password",
+  component: ForgotPasswordPage,
+});
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   browseRoute,
+  studyPlansRoute,
+  profileRoute,
   loginRoute,
   registerRoute,
+  forgotPasswordRoute,
 ]);
 
 export const router = createRouter({
