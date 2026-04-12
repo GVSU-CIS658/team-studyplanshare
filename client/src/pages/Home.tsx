@@ -13,10 +13,10 @@ import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
 import {
   getAllStudyPlans,
-  removeStudyPlanUpvote,
+  removeStudyPlanVote,
   StudyPlan,
   StudyPlanVote,
-  upvoteStudyPlan,
+  voteStudyPlan,
 } from "../services/studyPlanService";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,17 +50,12 @@ function getVoteMessage(
       ? U
       : never
     : never,
-  hasDownvoted: boolean,
 ): string {
   if (!user) {
     return "Login to upvote or downvote.";
   }
 
-  if (hasDownvoted) {
-    return "The current response includes your vote state.";
-  }
-
-  return "For now, downvote removes your upvote.";
+  return "";
 }
 
 function HomePage() {
@@ -107,7 +102,7 @@ function HomePage() {
     }
   };
 
-  const handleUpvote = async (plan: StudyPlan) => {
+  const handleVote = async (plan: StudyPlan, direction: "up" | "down") => {
     if (authLoading) return;
 
     if (!user) {
@@ -121,89 +116,52 @@ function HomePage() {
     setError(null);
 
     try {
-      if (plan.hasUpvoted) {
-        await removeStudyPlanUpvote(plan.id);
+      if (plan.myVote === direction) {
+        // Toggle off: remove existing vote
+        await removeStudyPlanVote(plan.id);
+        const scoreDelta = direction === "up" ? -1 : 1;
         setPlans((prev) =>
           prev.map((item) =>
             item.id === plan.id
               ? {
                   ...item,
-                  hasUpvoted: false,
-                  upvoteCount: Math.max(0, (item.upvoteCount || 0) - 1),
+                  myVote: null,
+                  score: (item.score ?? 0) + scoreDelta,
+                  upvoteCount: direction === "up" ? Math.max(0, (item.upvoteCount || 0) - 1) : item.upvoteCount,
+                  downvoteCount: direction === "down" ? Math.max(0, (item.downvoteCount || 0) - 1) : item.downvoteCount,
                 }
               : item,
           ),
         );
-        return;
-      }
-
-      await upvoteStudyPlan(plan.id);
-      setPlans((prev) =>
-        prev.map((item) =>
-          item.id === plan.id
-            ? {
-                ...item,
-                hasUpvoted: true,
-                upvoteCount: (item.upvoteCount || 0) + 1,
-              }
-            : item,
-        ),
-      );
-    } catch (voteError) {
-      const message = getApiErrorMessage(voteError);
-      if (message.toLowerCase().includes("already upvoted")) {
-        setPlans((prev) =>
-          prev.map((item) =>
-            item.id === plan.id ? { ...item, hasUpvoted: true } : item,
-          ),
-        );
-        await loadPlans();
       } else {
-        setError(message);
-      }
-    } finally {
-      setBusyPlanId(null);
-    }
-  };
-
-  const handleDownvote = async (plan: StudyPlan) => {
-    if (authLoading) return;
-
-    if (!user) {
-      await router.navigate({ to: "/login" });
-      return;
-    }
-
-    if (busyPlanId) return;
-
-    setBusyPlanId(plan.id);
-    setError(null);
-
-    try {
-      await removeStudyPlanUpvote(plan.id);
-      setPlans((prev) =>
-        prev.map((item) =>
-          item.id === plan.id
-            ? {
-                ...item,
-                hasUpvoted: false,
-                upvoteCount: Math.max(0, (item.upvoteCount || 0) - 1),
-              }
-            : item,
-        ),
-      );
-    } catch (voteError) {
-      const message = getApiErrorMessage(voteError);
-      if (message.toLowerCase().includes("upvote not found")) {
+        // Cast or change vote
+        await voteStudyPlan(plan.id, direction);
         setPlans((prev) =>
-          prev.map((item) =>
-            item.id === plan.id ? { ...item, hasUpvoted: false } : item,
-          ),
+          prev.map((item) => {
+            if (item.id !== plan.id) return item;
+            const prevVote = item.myVote;
+            const scoreDelta =
+              (direction === "up" ? 1 : -1) -
+              (prevVote === "up" ? 1 : prevVote === "down" ? -1 : 0);
+            return {
+              ...item,
+              myVote: direction,
+              score: (item.score ?? 0) + scoreDelta,
+              upvoteCount:
+                (item.upvoteCount || 0) +
+                (direction === "up" ? 1 : 0) -
+                (prevVote === "up" ? 1 : 0),
+              downvoteCount:
+                (item.downvoteCount || 0) +
+                (direction === "down" ? 1 : 0) -
+                (prevVote === "down" ? 1 : 0),
+            };
+          }),
         );
-        await loadPlans();
-      } else {
-        setError(message);
       }
+    } catch (voteError) {
+      setError(getApiErrorMessage(voteError));
+      await loadPlans();
     } finally {
       setBusyPlanId(null);
     }
@@ -294,7 +252,7 @@ function HomePage() {
               const hasDownvoted = voteState === "down";
               const isBusy = busyPlanId === plan.id;
 
-              const voteMessage = getVoteMessage(user, hasDownvoted);
+              const voteMessage = getVoteMessage(user);
 
               return (
                 <Card
@@ -329,7 +287,7 @@ function HomePage() {
                       <div className="px-3 py-3 mt-auto space-y-3 rounded-xl bg-slate-50">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-700">
-                            Score {plan.score ?? plan.upvoteCount ?? 0}
+                            <span className="font-bold">Score:</span> {plan.score ?? plan.upvoteCount ?? 0}
                           </p>
                           <Link
                             to="/study-plans"
@@ -342,59 +300,64 @@ function HomePage() {
                           </Link>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={hasUpvoted ? "default" : "outline"}
-                            disabled={isBusy || authLoading}
-                            onClick={() => handleUpvote(plan)}
-                            className={
-                              hasUpvoted
-                                ? "bg-emerald-600 hover:bg-emerald-700"
-                                : ""
-                            }
-                          >
-                            <ThumbsUp
-                              className={
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant={hasUpvoted ? "default" : "outline"}
+                              disabled={isBusy || authLoading}
+                              onClick={() => handleVote(plan, "up")}
+                              className={`h-8 w-8 ${
                                 hasUpvoted
-                                  ? "h-4 w-4 text-white"
-                                  : "h-4 w-4 text-emerald-600"
-                              }
-                            />
-                            Upvote
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isBusy || authLoading}
-                            onClick={() => handleDownvote(plan)}
-                            className={
-                              hasDownvoted || hasUpvoted
-                                ? "border-rose-200 text-rose-600 hover:bg-rose-50"
-                                : ""
-                            }
-                          >
-                            <ThumbsDown
-                              className={
-                                hasDownvoted || hasUpvoted
-                                  ? "h-4 w-4 text-rose-600"
-                                  : "h-4 w-4 text-slate-400"
-                              }
-                            />
-                            Downvote
-                          </Button>
+                                  ? "bg-emerald-600 hover:bg-emerald-700"
+                                  : ""
+                              }`}
+                            >
+                              <ThumbsUp
+                                className={
+                                  hasUpvoted
+                                    ? "h-4 w-4 text-white"
+                                    : "h-4 w-4 text-emerald-600"
+                                }
+                              />
+                            </Button>
+                            <span className="text-sm font-medium text-slate-600">
+                              {plan.upvoteCount ?? 0}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant={hasDownvoted ? "default" : "outline"}
+                              disabled={isBusy || authLoading}
+                              onClick={() => handleVote(plan, "down")}
+                              className={`h-8 w-8 ${
+                                hasDownvoted
+                                  ? "bg-rose-600 hover:bg-rose-700"
+                                  : ""
+                              }`}
+                            >
+                              <ThumbsDown
+                                className={
+                                  hasDownvoted
+                                    ? "h-4 w-4 text-white"
+                                    : "h-4 w-4 text-rose-600"
+                                }
+                              />
+                            </Button>
+                            <span className="text-sm font-medium text-slate-600">
+                              {plan.downvoteCount ?? 0}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{plan.upvoteCount ?? 0} upvotes</span>
-                          <span>{plan.downvoteCount ?? 0} downvotes</span>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          {voteMessage}
-                        </p>
+                        {voteMessage && (
+                          <p className="text-xs text-muted-foreground">
+                            {voteMessage}
+                          </p>
+                        )}
                       </div>
                     </CardContent>
                   </div>

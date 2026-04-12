@@ -54,10 +54,13 @@ export async function deleteStudyPlan(planId: string): Promise<void> {
   await apiClient.delete(`/studyPlans/${planId}`);
 }
 
-export async function upvoteStudyPlan(planId: string): Promise<void> {
-  await apiClient.post(`/upvotes/${planId}`);
+export async function voteStudyPlan(
+  planId: string,
+  vote: "up" | "down",
+): Promise<void> {
+  await apiClient.post(`/votes/${planId}`, { vote });
 }
 
-export async function removeStudyPlanUpvote(planId: string): Promise<void> {
-  await apiClient.delete(`/upvotes/${planId}`);
+export async function removeStudyPlanVote(planId: string): Promise<void> {
+  await apiClient.delete(`/votes/${planId}`);
 }
