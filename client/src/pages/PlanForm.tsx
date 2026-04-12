@@ -1,0 +1,234 @@
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter, useParams } from "@tanstack/react-router";
+import Layout from "../components/Layout";
+import { useAuth } from "../hooks/useAuth";
+import { getApiErrorMessage } from "../services/apiClient";
+import {
+  createStudyPlan,
+  getStudyPlan,
+  updateStudyPlan,
+  StudyPlanInput,
+} from "../services/studyPlanService";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ErrorToast } from "@/components/ui/error-toast";
+
+const emptyForm: StudyPlanInput = {
+  title: "",
+  courseName: "",
+  semester: "",
+  description: "",
+  imageUrl: "",
+};
+
+function PlanFormPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const params = useParams({ strict: false }) as { planId?: string };
+  const planId = params.planId ?? null;
+  const isEditing = planId !== null;
+
+  const [form, setForm] = useState<StudyPlanInput>(emptyForm);
+  const [busy, setBusy] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  let submitLabel = "Save plan";
+  if (busy && isEditing) {
+    submitLabel = "Updating...";
+  } else if (busy) {
+    submitLabel = "Saving...";
+  } else if (isEditing) {
+    submitLabel = "Update plan";
+  }
+
+  const canSubmit = useMemo(() => {
+    return (
+      form.title.trim().length > 0 &&
+      form.courseName.trim().length > 0 &&
+      form.semester.trim().length > 0 &&
+      form.description.trim().length > 0 &&
+      !busy &&
+      !loadingPlan
+    );
+  }, [form, busy, loadingPlan]);
+
+  useEffect(() => {
+    if (!isEditing || !user) return;
+
+    let cancelled = false;
+    setLoadingPlan(true);
+    setError(null);
+
+    getStudyPlan(planId)
+      .then((plan) => {
+        if (cancelled) return;
+        setForm({
+          title: plan.title ?? "",
+          courseName: plan.courseName ?? "",
+          semester: plan.semester ?? "",
+          description: plan.description ?? "",
+          imageUrl: plan.imageUrl ?? "",
+        });
+      })
+      .catch((loadError) => {
+        if (cancelled) return;
+        setError(getApiErrorMessage(loadError));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPlan(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId, isEditing, user]);
+
+  const onChange =
+    (field: keyof StudyPlanInput) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setForm((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+  const navigateToList = () => {
+    router.navigate({ to: "/study-plans" });
+  };
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canSubmit) return;
+
+    const payload: StudyPlanInput = {
+      title: form.title.trim(),
+      courseName: form.courseName.trim(),
+      semester: form.semester.trim(),
+      description: form.description.trim(),
+      imageUrl: form.imageUrl?.trim() || "",
+    };
+
+    setBusy(true);
+    setError(null);
+    try {
+      if (planId) {
+        await updateStudyPlan(planId, payload);
+      } else {
+        await createStudyPlan(payload);
+      }
+
+      navigateToList();
+    } catch (submitError) {
+      setError(getApiErrorMessage(submitError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Layout>
+      <section className="flex flex-col w-full max-w-4xl gap-6 p-6 mx-auto md:p-10">
+        <ErrorToast message={error} onClose={() => setError(null)} />
+        <Card>
+          <CardHeader>
+            <CardTitle>{isEditing ? "Edit plan" : "Create a new plan"}</CardTitle>
+            <CardDescription>
+              {isEditing
+                ? "Update the details of your study plan."
+                : "Fill out the form below to create a new study plan."}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            {loadingPlan ? (
+              <p className="text-sm text-muted-foreground">Loading plan...</p>
+            ) : (
+              <form onSubmit={onSubmit} className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={form.title}
+                    onChange={onChange("title")}
+                    required
+                    placeholder="e.g. CS 658 Midterm Plan"
+                  />
+                </div>
+
+                <div className="grid gap-2 md:grid-cols-2 md:gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="courseName">Course Name</Label>
+                    <Input
+                      id="courseName"
+                      value={form.courseName}
+                      onChange={onChange("courseName")}
+                      required
+                      placeholder="e.g. CIS 658"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="semester">Semester</Label>
+                    <Input
+                      id="semester"
+                      value={form.semester}
+                      onChange={onChange("semester")}
+                      required
+                      placeholder="e.g. Spring 2026"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <textarea
+                    id="description"
+                    value={form.description}
+                    onChange={onChange("description")}
+                    required
+                    className="px-3 py-2 text-sm bg-transparent border rounded-md shadow-xs outline-none min-h-28 border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    placeholder="Outline weekly goals, milestones, and study resources."
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="imageUrl">Image URL (optional)</Label>
+                  <Input
+                    id="imageUrl"
+                    value={form.imageUrl}
+                    onChange={onChange("imageUrl")}
+                    placeholder="https://example.com/plan-cover.png"
+                  />
+                </div>
+
+                <CardFooter className="flex justify-end gap-2 px-0 pb-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={navigateToList}
+                    disabled={busy}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={!canSubmit}>
+                    {submitLabel}
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+    </Layout>
+  );
+}
+
+export default PlanFormPage;
