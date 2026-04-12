@@ -46,4 +46,38 @@ router.get("/me", verifyToken, async (req, res) => {
   }
 });
 
+// PUT /users/me - Update current user's profile
+router.put("/me", verifyToken, async (req, res) => {
+  try {
+    const { uid } = req.user;
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const allowedFields = ["firstName", "lastName", "major", "school", "yearOfStudy", "bio"];
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = String(req.body[field]).slice(0, 500);
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
+    updates.updatedAt = FieldValue.serverTimestamp();
+    await userRef.update(updates);
+
+    const updated = await userRef.get();
+    return res.status(200).json({ id: updated.id, ...updated.data() });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;

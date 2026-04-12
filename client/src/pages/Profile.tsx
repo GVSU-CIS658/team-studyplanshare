@@ -1,9 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
-import { getUserProfile, type UserProfile } from "../services/userService";
+import {
+  getUserProfile,
+  updateUserProfile,
+  type UserProfile,
+} from "../services/userService";
 import { Button } from "@/components/ui/button";
 import { ErrorToast } from "@/components/ui/error-toast";
 import {
@@ -39,16 +43,9 @@ function ProfilePage() {
   const [draft, setDraft] = useState<StudentProfileDraft>(emptyDraft);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  const storageKey = useMemo(
-    () => {
-      const scopedUserId = profile?.id || user?.uid;
-      return scopedUserId ? `sps.profile.draft.${scopedUserId}` : null;
-    },
-    [profile?.id, user?.uid],
-  );
 
   useEffect(() => {
     if (!user) {
@@ -67,6 +64,14 @@ function ProfilePage() {
       try {
         const data = await getUserProfile();
         setProfile(data);
+        setDraft({
+          firstName: data.firstName ?? "",
+          lastName: data.lastName ?? "",
+          major: data.major ?? "",
+          school: data.school ?? "",
+          yearOfStudy: data.yearOfStudy ?? "",
+          bio: data.bio ?? "",
+        });
       } catch (loadError) {
         setError(getApiErrorMessage(loadError));
       } finally {
@@ -77,28 +82,6 @@ function ProfilePage() {
     loadProfile();
   }, [sessionKey, user]);
 
-  useEffect(() => {
-    setDraft(emptyDraft);
-    setNotice(null);
-  }, [sessionKey]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-
-    const savedDraft = localStorage.getItem(storageKey);
-    if (!savedDraft) return;
-
-    try {
-      const parsed = JSON.parse(savedDraft) as Partial<StudentProfileDraft>;
-      setDraft({
-        ...emptyDraft,
-        ...parsed,
-      });
-    } catch {
-      localStorage.removeItem(storageKey);
-    }
-  }, [storageKey]);
-
   const onChange =
     (field: keyof StudentProfileDraft) =>
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -106,20 +89,32 @@ function ProfilePage() {
       setNotice(null);
     };
 
-  const saveDraft = () => {
-    if (!storageKey) return;
-
-    localStorage.setItem(storageKey, JSON.stringify(draft));
-    setNotice("Profile draft saved on this device.");
-  };
-
-  const resetDraft = () => {
-    setDraft(emptyDraft);
+  const saveProfile = async () => {
+    setSaving(true);
+    setError(null);
     setNotice(null);
 
-    if (storageKey) {
-      localStorage.removeItem(storageKey);
+    try {
+      const updated = await updateUserProfile(draft);
+      setProfile(updated);
+      setNotice("Profile saved.");
+    } catch (saveError) {
+      setError(getApiErrorMessage(saveError));
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const resetForm = () => {
+    setDraft({
+      firstName: profile?.firstName ?? "",
+      lastName: profile?.lastName ?? "",
+      major: profile?.major ?? "",
+      school: profile?.school ?? "",
+      yearOfStudy: profile?.yearOfStudy ?? "",
+      bio: profile?.bio ?? "",
+    });
+    setNotice(null);
   };
 
   return (
@@ -130,8 +125,7 @@ function ProfilePage() {
           <CardHeader>
             <CardTitle>Profile</CardTitle>
             <CardDescription>
-              Basic student information. This form is client-only for now, so
-              changes are saved locally until the update API is ready.
+              Basic student information.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -235,11 +229,11 @@ function ProfilePage() {
             {notice && <p className="text-sm text-emerald-700">{notice}</p>}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={resetDraft}>
+              <Button type="button" variant="outline" onClick={resetForm}>
                 Reset
               </Button>
-              <Button type="button" onClick={saveDraft}>
-                Save draft
+              <Button type="button" onClick={saveProfile} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
               </Button>
             </div>
           </CardContent>
