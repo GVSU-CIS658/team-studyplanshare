@@ -99,6 +99,12 @@ export default function Layout({ children }) {
               >
                 My Plans
               </Link>
+              <Link
+                to="/saved-plans"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                Saved
+              </Link>
             </nav>
           </div>
           <nav aria-label="User navigation">{navContent}</nav>
