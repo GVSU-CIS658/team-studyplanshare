@@ -149,3 +149,6 @@ client/build/
 
 # Firebase emulator data
 .firebase/
+
+# npm lockfile
+package-lock.json
