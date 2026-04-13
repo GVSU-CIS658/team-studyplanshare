@@ -181,12 +181,15 @@ function StudyPlansPage() {
     <Layout>
       <section className="flex flex-col w-full max-w-4xl gap-6 p-6 mx-auto md:p-10">
         <ErrorToast message={error} onClose={() => setError(null)} />
+
         <Card>
           <CardHeader>
-            <CardTitle>My Plans</CardTitle>
-            <CardDescription>
-              Review, update, publish, archive, or return plans to draft.
-            </CardDescription>
+            <div>
+              <CardTitle>My Plans</CardTitle>
+              <CardDescription className="mt-1">
+                Review, update, publish, archive, or return plans to draft.
+              </CardDescription>
+            </div>
             <CardAction>
               <Link
                 to="/study-plans/new"
@@ -196,7 +199,8 @@ function StudyPlansPage() {
               </Link>
             </CardAction>
           </CardHeader>
-          <CardContent className="grid gap-3">
+
+          <CardContent className="grid gap-4">
             <div className="flex flex-wrap gap-2">
               {filterOptions.map((option) => (
                 <Button
@@ -228,77 +232,79 @@ function StudyPlansPage() {
               </p>
             )}
 
-            {!loading &&
-              !authLoading &&
-              filteredPlans.map((plan) => (
-                <article key={plan.id} className="p-4 border rounded-md">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold">{plan.title}</h3>
-                        <Badge variant={getStatusBadgeVariant(plan.status)}>
-                          {formatStatusLabel(plan.status)}
-                        </Badge>
+            {!loading && !authLoading && filteredPlans.length > 0 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {filteredPlans.map((plan) => (
+                  <Card key={plan.id} className="overflow-hidden">
+                    <img
+                      src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
+                      alt={plan.title}
+                      onError={(e) => { e.currentTarget.src = DEFAULT_PLAN_IMAGE; }}
+                      className="h-40 w-full object-cover"
+                    />
+                    <CardContent className="flex flex-col gap-3 p-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {plan.courseName} • {plan.semester}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          <h3 className="text-sm font-semibold line-clamp-1">
+                            {plan.title}
+                          </h3>
+                          <Badge variant={getStatusBadgeVariant(plan.status)}>
+                            {formatStatusLabel(plan.status)}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                          {plan.description}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {plan.courseName} • {plan.semester}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        to="/study-plans/$planId/edit"
-                        params={{ planId: plan.id }}
-                        className={buttonVariants({ variant: "outline", size: "sm" })}
-                      >
-                        Edit
-                      </Link>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onDelete(plan.id)}
-                        disabled={busy}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                  <img
-                    src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
-                    alt={plan.title}
-                    onError={(event) => {
-                      event.currentTarget.src = DEFAULT_PLAN_IMAGE;
-                    }}
-                    className="mt-3 h-44 w-full rounded-md object-cover sm:h-52"
-                  />
-                  <p className="mt-3 text-sm">{plan.description}</p>
-                  {plan.imageUrl ? (
-                    <p className="mt-2 text-xs break-all text-muted-foreground">
-                      Image: {plan.imageUrl}
-                    </p>
-                  ) : null}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {getQuickStatusActions(plan.status).map((status) => (
-                      <Button
-                        key={status}
-                        type="button"
-                        size="sm"
-                        variant={status === "published" ? "default" : "outline"}
-                        onClick={() => onChangeStatus(plan, status)}
-                        disabled={busy}
-                        className={cn(
-                          status === "archived" &&
-                            "border-slate-300 text-slate-700 hover:bg-slate-100",
-                        )}
-                      >
-                        {status === "draft" && "Move to draft"}
-                        {status === "published" && "Publish"}
-                        {status === "archived" && "Archive"}
-                      </Button>
-                    ))}
-                  </div>
-                </article>
-              ))}
+                      <div className="flex flex-wrap gap-1.5">
+                        {getQuickStatusActions(plan.status).map((status) => (
+                          <Button
+                            key={status}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onChangeStatus(plan, status)}
+                            disabled={busy}
+                            className={cn(
+                              "h-6 px-2 text-xs",
+                              status === "published" &&
+                                "text-green-700 hover:text-green-800 hover:bg-green-50",
+                              (status === "archived" || status === "draft") &&
+                                "text-slate-500 hover:text-slate-700 hover:bg-slate-100",
+                            )}
+                          >
+                            {status === "draft" && "→ Draft"}
+                            {status === "published" && "→ Publish"}
+                            {status === "archived" && "→ Archive"}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Link
+                          to="/study-plans/$planId/edit"
+                          params={{ planId: plan.id }}
+                          className={buttonVariants({ variant: "outline", size: "sm" })}
+                        >
+                          Edit
+                        </Link>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDelete(plan.id)}
+                          disabled={busy}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>
