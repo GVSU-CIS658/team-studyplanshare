@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
+const { getPublishedStudyPlanError } = require("../utils/studyPlans");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
@@ -37,8 +38,9 @@ router.post("/", verifyToken, async (req, res) => {
     }
 
     const planDoc = await db.collection("studyPlans").doc(planId).get();
-    if (!planDoc.exists) {
-      return res.status(404).json({ error: "Study plan not found" });
+    const planError = getPublishedStudyPlanError(planDoc, "saved");
+    if (planError) {
+      return res.status(planError.statusCode).json({ error: planError.error });
     }
 
     // Prevent duplicate saves
