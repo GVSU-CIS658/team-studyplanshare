@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Bookmark,
+  BookmarkCheck,
   BookOpen,
   LogOut,
   ThumbsDown,
@@ -18,6 +20,7 @@ import {
   StudyPlanVote,
   voteStudyPlan,
 } from "../services/studyPlanService";
+import { getSavedPlans, savePlan, removeSavedPlan } from "../services/savedPlanService";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ErrorToast } from "@/components/ui/error-toast";
@@ -66,6 +69,8 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
+  const [savedPlanMap, setSavedPlanMap] = useState<Map<string, string>>(new Map());
+  const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
 
   const firstName =
     formatWelcomeName(user?.name) ||
@@ -86,8 +91,19 @@ function HomePage() {
     }
   };
 
+  const loadSavedPlans = async () => {
+    if (!user) return;
+    try {
+      const saves = await getSavedPlans();
+      setSavedPlanMap(new Map(saves.map((s) => [s.planId, s.id])));
+    } catch {
+      // Non-critical, don't block the page
+    }
+  };
+
   useEffect(() => {
     loadPlans();
+    loadSavedPlans();
   }, [user?.uid]);
 
   const handleLogout = async () => {
@@ -164,6 +180,36 @@ function HomePage() {
       await loadPlans();
     } finally {
       setBusyPlanId(null);
+    }
+  };
+
+  const handleToggleSave = async (planId: string) => {
+    if (!user) {
+      await router.navigate({ to: "/login" });
+      return;
+    }
+    if (savingPlanId) return;
+
+    setSavingPlanId(planId);
+    setError(null);
+
+    try {
+      const existingSaveId = savedPlanMap.get(planId);
+      if (existingSaveId) {
+        await removeSavedPlan(existingSaveId);
+        setSavedPlanMap((prev) => {
+          const next = new Map(prev);
+          next.delete(planId);
+          return next;
+        });
+      } else {
+        const saved = await savePlan(planId);
+        setSavedPlanMap((prev) => new Map(prev).set(planId, saved.id));
+      }
+    } catch (saveError) {
+      setError(getApiErrorMessage(saveError));
+    } finally {
+      setSavingPlanId(null);
     }
   };
 
@@ -251,6 +297,8 @@ function HomePage() {
               const hasUpvoted = voteState === "up";
               const hasDownvoted = voteState === "down";
               const isBusy = busyPlanId === plan.id;
+              const isSaved = savedPlanMap.has(plan.id);
+              const isSaving = savingPlanId === plan.id;
 
               const voteMessage = getVoteMessage(user);
 
@@ -300,57 +348,74 @@ function HomePage() {
                           </Link>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant={hasUpvoted ? "default" : "outline"}
-                              disabled={isBusy || authLoading}
-                              onClick={() => handleVote(plan, "up")}
-                              className={`h-8 w-8 ${
-                                hasUpvoted
-                                  ? "bg-emerald-600 hover:bg-emerald-700"
-                                  : ""
-                              }`}
-                            >
-                              <ThumbsUp
-                                className={
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant={hasUpvoted ? "default" : "outline"}
+                                disabled={isBusy || authLoading}
+                                onClick={() => handleVote(plan, "up")}
+                                className={`h-8 w-8 ${
                                   hasUpvoted
-                                    ? "h-4 w-4 text-white"
-                                    : "h-4 w-4 text-emerald-600"
-                                }
-                              />
-                            </Button>
-                            <span className="text-sm font-medium text-slate-600">
-                              {plan.upvoteCount ?? 0}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant={hasDownvoted ? "default" : "outline"}
-                              disabled={isBusy || authLoading}
-                              onClick={() => handleVote(plan, "down")}
-                              className={`h-8 w-8 ${
-                                hasDownvoted
-                                  ? "bg-rose-600 hover:bg-rose-700"
-                                  : ""
-                              }`}
-                            >
-                              <ThumbsDown
-                                className={
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : ""
+                                }`}
+                              >
+                                <ThumbsUp
+                                  className={
+                                    hasUpvoted
+                                      ? "h-4 w-4 text-white"
+                                      : "h-4 w-4 text-emerald-600"
+                                  }
+                                />
+                              </Button>
+                              <span className="text-sm font-medium text-slate-600">
+                                {plan.upvoteCount ?? 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant={hasDownvoted ? "default" : "outline"}
+                                disabled={isBusy || authLoading}
+                                onClick={() => handleVote(plan, "down")}
+                                className={`h-8 w-8 ${
                                   hasDownvoted
-                                    ? "h-4 w-4 text-white"
-                                    : "h-4 w-4 text-rose-600"
-                                }
-                              />
-                            </Button>
-                            <span className="text-sm font-medium text-slate-600">
-                              {plan.downvoteCount ?? 0}
-                            </span>
+                                    ? "bg-rose-600 hover:bg-rose-700"
+                                    : ""
+                                }`}
+                              >
+                                <ThumbsDown
+                                  className={
+                                    hasDownvoted
+                                      ? "h-4 w-4 text-white"
+                                      : "h-4 w-4 text-rose-600"
+                                  }
+                                />
+                              </Button>
+                              <span className="text-sm font-medium text-slate-600">
+                                {plan.downvoteCount ?? 0}
+                              </span>
+                            </div>
                           </div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant={isSaved ? "default" : "outline"}
+                            disabled={isSaving}
+                            onClick={() => handleToggleSave(plan.id)}
+                            className="h-8 w-8"
+                            style={isSaved ? { backgroundColor: "#2563eb" } : undefined}
+                          >
+                            {isSaved ? (
+                              <BookmarkCheck className="h-4 w-4 text-white" />
+                            ) : (
+                              <Bookmark className="h-4 w-4 text-slate-400" />
+                            )}
+                          </Button>
                         </div>
 
                         {voteMessage && (

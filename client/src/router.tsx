@@ -13,7 +13,9 @@ import RegisterPage from "./pages/Register";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import HomePage from "./pages/Home";
 import StudyPlansPage from "./pages/StudyPlans";
+import PlanFormPage from "./pages/PlanForm";
 import ProfilePage from "./pages/Profile";
+import SavedPlansPage from "./pages/SavedPlans";
 
 type RouterContext = {
   auth: {
@@ -72,6 +74,36 @@ const studyPlansRoute = createRoute({
   component: StudyPlansPage,
 });
 
+const studyPlanNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/study-plans/new",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: PlanFormPage,
+});
+
+const studyPlanEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/study-plans/$planId/edit",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: PlanFormPage,
+});
+
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/profile",
@@ -85,6 +117,21 @@ const profileRoute = createRoute({
     }
   },
   component: ProfilePage,
+});
+
+const savedPlansRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/saved-plans",
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.loading && !context.auth.user) {
+      sessionStorage.setItem(
+        REDIRECT_KEY,
+        `${location.pathname}${location.searchStr}`,
+      );
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: SavedPlansPage,
 });
 
 const loginRoute = createRoute({
@@ -108,7 +155,10 @@ const forgotPasswordRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute,
   browseRoute,
+  studyPlanNewRoute,
+  studyPlanEditRoute,
   studyPlansRoute,
+  savedPlansRoute,
   profileRoute,
   loginRoute,
   registerRoute,

@@ -31,6 +31,11 @@ export interface StudyPlanInput {
   imageUrl?: string;
 }
 
+export async function getStudyPlan(planId: string): Promise<StudyPlan> {
+  const response = await apiClient.get<StudyPlan>(`/studyPlans/${planId}`);
+  return response.data;
+}
+
 export async function getMyStudyPlans(): Promise<StudyPlan[]> {
   const response = await apiClient.get<StudyPlan[]>("/studyPlans/my");
   return response.data;
