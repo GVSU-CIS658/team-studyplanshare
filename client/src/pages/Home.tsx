@@ -40,10 +40,6 @@ function getVoteState(plan: StudyPlan): StudyPlanVote {
     return plan.myVote;
   }
 
-  if (plan.hasUpvoted) {
-    return "up";
-  }
-
   return null;
 }
 

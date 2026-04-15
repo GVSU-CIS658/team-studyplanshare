@@ -21,7 +21,6 @@ export interface StudyPlan {
   downvoteCount?: number;
   score?: number;
   myVote?: StudyPlanVote;
-  hasUpvoted?: boolean;
 
   createdAt?: string;
   updatedAt?: string;
