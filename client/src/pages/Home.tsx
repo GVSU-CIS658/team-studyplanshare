@@ -223,7 +223,7 @@ function HomePage() {
               </Badge>
               <div className="space-y-2">
                 <CardTitle className="text-3xl leading-tight text-slate-900 sm:text-4xl">
-                  Welcome back, {firstName}
+                  {user ? `Welcome back, ${firstName}` : "StudyPlanShare"}
                 </CardTitle>
                 <CardDescription className="max-w-2xl text-sm leading-6 text-slate-600">
                   Browse the latest plans your classmates shared, open your own
@@ -233,23 +233,35 @@ function HomePage() {
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Link
-                to="/study-plans"
-                className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
-              >
-                My study plans
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="w-full sm:w-auto"
-              >
-                <LogOut className="w-4 h-4" />
-                {isLoggingOut ? "Logging out..." : "Logout"}
-              </Button>
+              {user ? (
+                <>
+                  <Link
+                    to="/study-plans"
+                    className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
+                  >
+                    My study plans
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full sm:w-auto"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                  </Button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
+                >
+                  Sign in to get started
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
             </div>
           </CardHeader>
         </Card>
