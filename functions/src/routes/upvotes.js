@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
+const { getPublishedStudyPlanError } = require("../utils/studyPlans");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
@@ -15,8 +16,9 @@ router.post("/:planId", verifyToken, async (req, res) => {
     const upvoteRef = planRef.collection("upvotes").doc(uid);
 
     const planDoc = await planRef.get();
-    if (!planDoc.exists) {
-      return res.status(404).json({ error: "Study plan not found" });
+    const planError = getPublishedStudyPlanError(planDoc, "upvoted");
+    if (planError) {
+      return res.status(planError.statusCode).json({ error: planError.error });
     }
 
     const upvoteDoc = await upvoteRef.get();

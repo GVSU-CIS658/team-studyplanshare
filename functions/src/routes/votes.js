@@ -2,11 +2,12 @@ const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
 const { verifyToken } = require("../middleware/auth");
+const { getPublishedStudyPlanError } = require("../utils/studyPlans");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
 
-const VALID_VOTES = ["up", "down"];
+const VALID_VOTES = new Set(["up", "down"]);
 
 // POST /votes/:planId - Cast or change a vote
 router.post("/:planId", verifyToken, async (req, res) => {
@@ -15,7 +16,7 @@ router.post("/:planId", verifyToken, async (req, res) => {
     const { planId } = req.params;
     const { vote } = req.body;
 
-    if (!vote || !VALID_VOTES.includes(vote)) {
+    if (!vote || !VALID_VOTES.has(vote)) {
       return res
         .status(400)
         .json({ error: 'Invalid vote. Must be "up" or "down".' });
@@ -25,8 +26,9 @@ router.post("/:planId", verifyToken, async (req, res) => {
     const voteRef = planRef.collection("votes").doc(uid);
 
     const planDoc = await planRef.get();
-    if (!planDoc.exists) {
-      return res.status(404).json({ error: "Study plan not found" });
+    const planError = getPublishedStudyPlanError(planDoc, "voted on");
+    if (planError) {
+      return res.status(planError.statusCode).json({ error: planError.error });
     }
 
     const existingVote = await voteRef.get();
@@ -43,7 +45,9 @@ router.post("/:planId", verifyToken, async (req, res) => {
       const inc = FieldValue.increment;
       const counterUpdates = {
         upvoteCount: inc(previousVote === "up" ? -1 : vote === "up" ? 1 : 0),
-        downvoteCount: inc(previousVote === "down" ? -1 : vote === "down" ? 1 : 0),
+        downvoteCount: inc(
+          previousVote === "down" ? -1 : vote === "down" ? 1 : 0,
+        ),
         score: inc((vote === "up" ? 1 : -1) - (previousVote === "up" ? 1 : -1)),
       };
 
@@ -56,7 +60,9 @@ router.post("/:planId", verifyToken, async (req, res) => {
         createdAt: FieldValue.serverTimestamp(),
       });
 
-      const counterUpdates = { score: FieldValue.increment(vote === "up" ? 1 : -1) };
+      const counterUpdates = {
+        score: FieldValue.increment(vote === "up" ? 1 : -1),
+      };
       if (vote === "up") {
         counterUpdates.upvoteCount = FieldValue.increment(1);
       } else {
@@ -92,7 +98,9 @@ router.delete("/:planId", verifyToken, async (req, res) => {
     const batch = db.batch();
     batch.delete(voteRef);
 
-    const counterUpdates = { score: FieldValue.increment(vote === "up" ? -1 : 1) };
+    const counterUpdates = {
+      score: FieldValue.increment(vote === "up" ? -1 : 1),
+    };
     if (vote === "up") {
       counterUpdates.upvoteCount = FieldValue.increment(-1);
     } else {

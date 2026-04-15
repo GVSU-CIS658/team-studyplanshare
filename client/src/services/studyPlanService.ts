@@ -7,6 +7,8 @@ export async function getAllStudyPlans(): Promise<StudyPlan[]> {
 
 export type StudyPlanVote = "up" | "down" | null;
 
+export type StudyPlanStatus = "draft" | "published" | "archived";
+
 export interface StudyPlan {
   id: string;
   title: string;
@@ -20,7 +22,13 @@ export interface StudyPlan {
   score?: number;
   myVote?: StudyPlanVote;
   hasUpvoted?: boolean;
-  createdAt?: unknown;
+
+  createdAt?: string;
+  updatedAt?: string;
+
+  status: StudyPlanStatus;
+  publishedAt?: string | null;
+  archivedAt?: string | null;
 }
 
 export interface StudyPlanInput {
@@ -28,7 +36,8 @@ export interface StudyPlanInput {
   courseName: string;
   semester: string;
   description: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
+  status: StudyPlanStatus;
 }
 
 export async function getStudyPlan(planId: string): Promise<StudyPlan> {

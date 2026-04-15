@@ -5,11 +5,31 @@ const { verifyToken, optionalAuth } = require("../middleware/auth");
 
 const db = admin.firestore();
 const { FieldValue } = require("firebase-admin/firestore");
+
+const VALID_STATUSES = ["draft", "published", "archived"];
+
+function normalizeStatus(value) {
+  if (!value) return "draft";
+  return VALID_STATUSES.includes(value) ? value : null;
+}
+
+function getStatusTimestampUpdates(nextStatus, previousData = {}) {
+  const updates = {
+    archivedAt: nextStatus === "archived" ? FieldValue.serverTimestamp() : null,
+  };
+
+  if (nextStatus === "published" && !previousData.publishedAt) {
+    updates.publishedAt = FieldValue.serverTimestamp();
+  }
+
+  return updates;
+}
+
 // GET /studyPlans - Get all public study plans (filter by course, sort, paginate)
 router.get("/", optionalAuth, async (req, res) => {
   try {
     const { courseName, sortBy, limit = 10, startAfter } = req.query;
-    let query = db.collection("studyPlans");
+    let query = db.collection("studyPlans").where("status", "==", "published");
 
     if (courseName) {
       query = query.where("courseName", "==", courseName);
@@ -99,8 +119,8 @@ router.get("/my", verifyToken, async (req, res) => {
   }
 });
 
-// GET /studyPlans/:planId - Public: Get a single study plan
-router.get("/:planId", async (req, res) => {
+// GET /studyPlans/:planId - Public for published plans, owner-only otherwise
+router.get("/:planId", optionalAuth, async (req, res) => {
   try {
     const { planId } = req.params;
     const planDoc = await db.collection("studyPlans").doc(planId).get();
@@ -109,7 +129,13 @@ router.get("/:planId", async (req, res) => {
       return res.status(404).json({ error: "Study plan not found" });
     }
 
-    return res.status(200).json({ id: planDoc.id, ...planDoc.data() });
+    const plan = planDoc.data();
+    const isOwner = req.user && plan.userId === req.user.uid;
+    if (plan.status !== "published" && !isOwner) {
+      return res.status(404).json({ error: "Study plan not found" });
+    }
+
+    return res.status(200).json({ id: planDoc.id, ...plan });
   } catch (error) {
     console.error("Error fetching study plan:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -120,7 +146,15 @@ router.get("/:planId", async (req, res) => {
 router.post("/", verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
-    const { title, courseName, semester, description, imageUrl } = req.body;
+    const { title, courseName, semester, description, imageUrl, status } =
+      req.body;
+
+    const normalizedStatus = normalizeStatus(status);
+    if (!normalizedStatus) {
+      return res.status(400).json({
+        error: 'Invalid status. Must be "draft", "published", or "archived".',
+      });
+    }
 
     if (!title || !courseName || !semester || !description) {
       return res.status(400).json({
@@ -136,10 +170,16 @@ router.post("/", verifyToken, async (req, res) => {
       description,
       imageUrl: imageUrl || null,
       userId: uid,
+      status: normalizedStatus,
       upvoteCount: 0,
       downvoteCount: 0,
       score: 0,
       createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      publishedAt:
+        normalizedStatus === "published" ? FieldValue.serverTimestamp() : null,
+      archivedAt:
+        normalizedStatus === "archived" ? FieldValue.serverTimestamp() : null,
     };
 
     const docRef = await db.collection("studyPlans").add(newPlan);
@@ -155,7 +195,8 @@ router.put("/:planId", verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
     const { planId } = req.params;
-    const { title, courseName, semester, description, imageUrl } = req.body;
+    const { title, courseName, semester, description, imageUrl, status } =
+      req.body;
 
     const planRef = db.collection("studyPlans").doc(planId);
     const planDoc = await planRef.get();
@@ -176,6 +217,18 @@ router.put("/:planId", verifyToken, async (req, res) => {
     if (semester !== undefined) updates.semester = semester;
     if (description !== undefined) updates.description = description;
     if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+    if (status !== undefined) {
+      const normalizedStatus = normalizeStatus(status);
+      if (!normalizedStatus) {
+        return res.status(400).json({
+          error:
+            'Invalid status. Must be "draft", "published", or "archived".',
+        });
+      }
+      updates.status = normalizedStatus;
+      Object.assign(updates, getStatusTimestampUpdates(normalizedStatus, planDoc.data()));
+    }
+    updates.updatedAt = FieldValue.serverTimestamp();
 
     await planRef.update(updates);
     return res.status(200).json({ message: "Study plan updated successfully" });
