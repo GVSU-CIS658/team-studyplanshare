@@ -190,28 +190,28 @@ function LoginPage() {
               <div className="pt-2 text-center text-sm text-muted-foreground">
                 <span>Or Sign Up using Social App</span>
               </div>
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex flex-col items-center gap-3">
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="outline"
                   onClick={handleGoogleLogin}
                   disabled={isSubmitting || isGoogleSubmitting || isGithubSubmitting}
                   aria-label="Sign in with Google"
-                  className="size-10 rounded-full border border-border bg-background hover:bg-muted"
+                  className="h-11 w-full rounded-full border border-border bg-white text-gray-700 font-medium shadow-sm transition-colors hover:bg-gray-50 dark:bg-white dark:text-gray-700 dark:hover:bg-gray-100"
                 >
                   <GoogleIcon />
+                  <span>{isGoogleSubmitting ? "Connecting..." : "Sign Up with Google"}</span>
                 </Button>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="default"
                   onClick={handleGithubLogin}
                   disabled={isSubmitting || isGoogleSubmitting || isGithubSubmitting}
                   aria-label="Sign in with GitHub"
-                  className="size-10 rounded-full border border-border bg-background text-foreground hover:bg-muted"
+                  className="h-11 w-full rounded-full border-0 bg-gray-900 text-white font-medium shadow-sm transition-colors hover:bg-gray-800 dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800"
                 >
                   <Github className="h-5 w-5" />
+                  <span>{isGithubSubmitting ? "Connecting..." : "Sign Up with GitHub"}</span>
                 </Button>
               </div>
             </form>
