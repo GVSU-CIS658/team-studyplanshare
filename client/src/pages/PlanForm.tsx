@@ -6,6 +6,7 @@ import { getApiErrorMessage } from "../services/apiClient";
 import {
   createStudyPlan,
   getStudyPlan,
+  StudyPlan,
   updateStudyPlan,
   StudyPlanInput,
 } from "../services/studyPlanService";
@@ -28,7 +29,30 @@ const emptyForm: StudyPlanInput = {
   semester: "",
   description: "",
   imageUrl: "",
+  status: "draft",
 };
+
+const statusOptions = [
+  {
+    value: "draft",
+    label: "Draft",
+    description: "Only you can see it while you work on it.",
+  },
+  {
+    value: "published",
+    label: "Published",
+    description: "Visible to everyone in the shared plans feed.",
+  },
+  {
+    value: "archived",
+    label: "Archived",
+    description: "Hidden from the public feed but kept in your workspace.",
+  },
+] as const satisfies ReadonlyArray<{
+  value: StudyPlan["status"];
+  label: string;
+  description: string;
+}>;
 
 function PlanFormPage() {
   const { user } = useAuth();
@@ -78,6 +102,7 @@ function PlanFormPage() {
           semester: plan.semester ?? "",
           description: plan.description ?? "",
           imageUrl: plan.imageUrl ?? "",
+          status: plan.status ?? "draft",
         });
       })
       .catch((loadError) => {
@@ -95,7 +120,11 @@ function PlanFormPage() {
 
   const onChange =
     (field: keyof StudyPlanInput) =>
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (
+      event: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >,
+    ) => {
       setForm((prev) => ({ ...prev, [field]: event.target.value }));
     };
 
@@ -114,6 +143,7 @@ function PlanFormPage() {
       semester: form.semester.trim(),
       description: form.description.trim(),
       imageUrl: form.imageUrl?.trim() || "",
+      status: form.status,
     };
 
     setBusy(true);
@@ -188,6 +218,32 @@ function PlanFormPage() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label htmlFor="status">Visibility status</Label>
+                  <select
+                    id="status"
+                    value={form.status}
+                    onChange={onChange("status")}
+                    className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {statusOptions.find((option) => option.value === form.status)
+                      ?.description ?? "Only published plans are visible to everyone."}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-slate-700">
+                  Only plans with status <span className="font-semibold">Published</span>{" "}
+                  appear in the shared feed. Drafts and archived plans stay in your
+                  private workspace.
+                </div>
+
+                <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
                   <textarea
                     id="description"
@@ -203,7 +259,7 @@ function PlanFormPage() {
                   <Label htmlFor="imageUrl">Image URL (optional)</Label>
                   <Input
                     id="imageUrl"
-                    value={form.imageUrl}
+                    value={form.imageUrl ?? ""}
                     onChange={onChange("imageUrl")}
                     placeholder="https://example.com/plan-cover.png"
                   />
