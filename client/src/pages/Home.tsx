@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   ArrowRight,
+  BookOpen,
   Bookmark,
   BookmarkCheck,
   LogOut,
@@ -278,19 +279,29 @@ function HomePage() {
         </div>
 
         {(loading || authLoading) && (
-          <Card>
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              Loading shared study plans...
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[0, 1].map((i) => (
+              <div key={i} className="animate-pulse space-y-3 rounded-lg border border-border/70 p-0 overflow-hidden">
+                <div className="h-44 sm:h-52 lg:h-56 bg-muted" />
+                <div className="space-y-3 p-5">
+                  <div className="h-3 w-1/3 rounded bg-muted" />
+                  <div className="h-5 w-2/3 rounded bg-muted" />
+                  <div className="h-4 w-full rounded bg-muted" />
+                  <div className="h-4 w-4/5 rounded bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {!loading && plans.length === 0 && (
-          <Card>
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              No shared study plans yet.
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
+            <h3 className="mt-4 text-lg font-semibold text-slate-900">No shared plans yet</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Be the first to share a study plan with your classmates. Create one from your plans page and publish it.
+            </p>
+          </div>
         )}
 
         {!loading && !authLoading && plans.length > 0 && (
