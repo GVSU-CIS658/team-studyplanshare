@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Bookmark,
   BookmarkCheck,
-  BookOpen,
   LogOut,
   ThumbsDown,
   ThumbsUp,
@@ -263,10 +262,6 @@ function HomePage() {
             <p className="text-sm text-muted-foreground">
               {plans.length} plan{plans.length === 1 ? "" : "s"} available
             </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <BookOpen className="w-4 h-4" />
-            Simple list with optional plan images
           </div>
         </div>
 
