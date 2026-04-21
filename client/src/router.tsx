@@ -16,6 +16,7 @@ import StudyPlansPage from "./pages/StudyPlans";
 import PlanFormPage from "./pages/PlanForm";
 import ProfilePage from "./pages/Profile";
 import SavedPlansPage from "./pages/SavedPlans";
+import { appBasePath } from "./lib/basePath";
 
 type RouterContext = {
   auth: {
@@ -167,6 +168,7 @@ const routeTree = rootRoute.addChildren([
 
 export const router = createRouter({
   routeTree,
+  basepath: appBasePath,
   context: {
     auth: {
       user: null,

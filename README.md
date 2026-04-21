@@ -87,3 +87,9 @@ To deploy to Firebase:
 ```
 firebase deploy
 ```
+
+To deploy the React client to GitHub Pages:
+
+1. In your repository settings, set **Pages** source to **GitHub Actions**.
+2. Push to `main`.
+3. The workflow at [`.github/workflows/deploy-client.yml`](./.github/workflows/deploy-client.yml) builds `client/` with the correct repo-relative base path and publishes `client/dist` to Pages.
