@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   ArrowRight,
+  BookOpen,
   Bookmark,
   BookmarkCheck,
   LogOut,
+  Search,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -19,9 +21,14 @@ import {
   StudyPlanVote,
   voteStudyPlan,
 } from "../services/studyPlanService";
-import { getSavedPlans, savePlan, removeSavedPlan } from "../services/savedPlanService";
+import {
+  getSavedPlans,
+  savePlan,
+  removeSavedPlan,
+} from "../services/savedPlanService";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { ErrorToast } from "@/components/ui/error-toast";
 import {
   Card,
@@ -64,8 +71,45 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
-  const [savedPlanMap, setSavedPlanMap] = useState<Map<string, string>>(new Map());
+  const [savedPlanMap, setSavedPlanMap] = useState<Map<string, string>>(
+    new Map(),
+  );
   const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"popular" | "newest" | "oldest" | "az">(
+    "popular",
+  );
+
+  const displayedPlans = useMemo(() => {
+    let result = plans;
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.courseName.toLowerCase().includes(q) ||
+          p.semester.toLowerCase().includes(q),
+      );
+    }
+
+    return [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "popular":
+          return (
+            (b.score ?? b.upvoteCount ?? 0) - (a.score ?? a.upvoteCount ?? 0)
+          );
+        case "newest":
+          return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+        case "oldest":
+          return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+        case "az":
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  }, [plans, search, sortBy]);
 
   const firstName =
     formatWelcomeName(user?.name) ||
@@ -138,8 +182,14 @@ function HomePage() {
                   ...item,
                   myVote: null,
                   score: (item.score ?? 0) + scoreDelta,
-                  upvoteCount: direction === "up" ? Math.max(0, (item.upvoteCount || 0) - 1) : item.upvoteCount,
-                  downvoteCount: direction === "down" ? Math.max(0, (item.downvoteCount || 0) - 1) : item.downvoteCount,
+                  upvoteCount:
+                    direction === "up"
+                      ? Math.max(0, (item.upvoteCount || 0) - 1)
+                      : item.upvoteCount,
+                  downvoteCount:
+                    direction === "down"
+                      ? Math.max(0, (item.downvoteCount || 0) - 1)
+                      : item.downvoteCount,
                 }
               : item,
           ),
@@ -237,7 +287,9 @@ function HomePage() {
                 <>
                   <Link
                     to="/study-plans"
-                    className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
+                    className={
+                      buttonVariants({ size: "lg" }) + " w-full sm:w-auto"
+                    }
                   >
                     My study plans
                     <ArrowRight className="w-4 h-4" />
@@ -256,7 +308,9 @@ function HomePage() {
               ) : (
                 <Link
                   to="/login"
-                  className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
+                  className={
+                    buttonVariants({ size: "lg" }) + " w-full sm:w-auto"
+                  }
                 >
                   Sign in to get started
                   <ArrowRight className="w-4 h-4" />
@@ -266,14 +320,19 @@ function HomePage() {
           </CardHeader>
         </Card>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Shared plans
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {plans.length} plan{plans.length === 1 ? "" : "s"} available
-            </p>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by title, course, or semester..."
+              className="pl-8"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <BookOpen className="w-4 h-4" />
+            Simple list with optional plan images
           </div>
         </div>
 
@@ -293,9 +352,15 @@ function HomePage() {
           </Card>
         )}
 
-        {!loading && !authLoading && plans.length > 0 && (
+        {!loading && plans.length > 0 && displayedPlans.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No plans match your search.
+          </p>
+        )}
+
+        {!loading && !authLoading && displayedPlans.length > 0 && (
           <div className="grid gap-4 lg:grid-cols-2">
-            {plans.map((plan) => {
+            {displayedPlans.map((plan) => {
               const voteState = getVoteState(plan);
               const hasUpvoted = voteState === "up";
               const hasDownvoted = voteState === "down";
@@ -338,7 +403,8 @@ function HomePage() {
                       <div className="px-3 py-3 mt-auto space-y-3 rounded-xl bg-slate-50">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-slate-700">
-                            <span className="font-bold">Score:</span> {plan.score ?? plan.upvoteCount ?? 0}
+                            <span className="font-bold">Score:</span>{" "}
+                            {plan.score ?? plan.upvoteCount ?? 0}
                           </p>
                           <Link
                             to="/study-plans"
@@ -410,13 +476,17 @@ function HomePage() {
                             variant={isSaved ? "default" : "outline"}
                             disabled={isSaving}
                             onClick={() => handleToggleSave(plan.id)}
-                            className="h-8 w-8"
-                            style={isSaved ? { backgroundColor: "#2563eb" } : undefined}
+                            className="w-8 h-8"
+                            style={
+                              isSaved
+                                ? { backgroundColor: "#2563eb" }
+                                : undefined
+                            }
                           >
                             {isSaved ? (
-                              <BookmarkCheck className="h-4 w-4 text-white" />
+                              <BookmarkCheck className="w-4 h-4 text-white" />
                             ) : (
-                              <Bookmark className="h-4 w-4 text-slate-400" />
+                              <Bookmark className="w-4 h-4 text-slate-400" />
                             )}
                           </Button>
                         </div>
