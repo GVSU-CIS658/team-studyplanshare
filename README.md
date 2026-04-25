@@ -20,28 +20,28 @@ Many students struggle with organizing coursework and identifying effective stud
 
 ## Preliminary Architecture
 
-| Layer | Technology | Responsibilities |
-|---|---|---|
-| Frontend | React | UI rendering, routing, token management, API calls, client-side validation |
-| Backend | Firebase Cloud Functions | Token verification, access control, request validation, CRUD and upvote logic |
-| Database | Cloud Firestore | Structured collections, indexed queries, filtering, sorting, pagination |
+| Layer    | Technology               | Responsibilities                                                              |
+| -------- | ------------------------ | ----------------------------------------------------------------------------- |
+| Frontend | React                    | UI rendering, routing, token management, API calls, client-side validation    |
+| Backend  | Firebase Cloud Functions | Token verification, access control, request validation, CRUD and upvote logic |
+| Database | Cloud Firestore          | Structured collections, indexed queries, filtering, sorting, pagination       |
 
 ## Preliminary Database Design
 
-| Collection | Fields |
-|---|---|
-| `users` | userId, email, createdAt |
-| `studyPlans` | planId, title, courseName, semester, description, imageUrl, userId, upvoteCount, createdAt |
-| `savedPlans` | saveId, userId, planId, createdAt |
-| `upvotes` (subcollection) | `studyPlans/{planId}/upvotes/{userId}` |
+| Collection                | Fields                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `users`                   | userId, email, createdAt                                                                   |
+| `studyPlans`              | planId, title, courseName, semester, description, imageUrl, userId, upvoteCount, createdAt |
+| `savedPlans`              | saveId, userId, planId, createdAt                                                          |
+| `upvotes` (subcollection) | `studyPlans/{planId}/upvotes/{userId}`                                                     |
 
 ## Team Responsibilities
 
-| Role | Responsibilities |
-|---|---|
-| Frontend Lead | UI components, routing, authentication integration, API communication |
-| Backend Lead | Cloud Functions, token verification, access control, CRUD logic |
-| Database/Integration Lead | Firestore schema design, indexing, query optimization, deployment |
+| Role                      | Responsibilities                                                      |
+| ------------------------- | --------------------------------------------------------------------- |
+| Frontend Lead             | UI components, routing, authentication integration, API communication |
+| Backend Lead              | Cloud Functions, token verification, access control, CRUD logic       |
+| Database/Integration Lead | Firestore schema design, indexing, query optimization, deployment     |
 
 ## Getting Started
 
