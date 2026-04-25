@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Bookmark } from "lucide-react";
 
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
@@ -98,13 +99,28 @@ function SavedPlansPage() {
 
           <CardContent className="grid gap-3">
             {(loading || authLoading) && (
-              <p className="text-sm text-muted-foreground">Loading saved plans...</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[0, 1].map((i) => (
+                  <div key={i} className="animate-pulse space-y-3 rounded-lg border overflow-hidden">
+                    <div className="h-40 bg-muted" />
+                    <div className="space-y-3 p-4">
+                      <div className="h-3 w-1/3 rounded bg-muted" />
+                      <div className="h-4 w-2/3 rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {!loading && !authLoading && savedPlans.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No saved plans yet. Browse the shared feed to bookmark plans.
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Bookmark className="h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-3 text-base font-semibold text-slate-900">No saved plans</h3>
+                <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                  Plans you bookmark from the shared feed will appear here for easy access.
+                </p>
+              </div>
             )}
 
             {!loading && !authLoading && savedPlans.length > 0 && (

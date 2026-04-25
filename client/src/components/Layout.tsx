@@ -89,19 +89,28 @@ export default function Layout({ children }) {
             >
               <Link
                 to="/"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                className={buttonVariants({
+                  variant: pathname === "/" ? "secondary" : "ghost",
+                  size: "sm",
+                })}
               >
                 Home
               </Link>
               <Link
                 to="/study-plans"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                className={buttonVariants({
+                  variant: pathname === "/study-plans" ? "secondary" : "ghost",
+                  size: "sm",
+                })}
               >
                 My Plans
               </Link>
               <Link
                 to="/saved-plans"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                className={buttonVariants({
+                  variant: pathname === "/saved-plans" ? "secondary" : "ghost",
+                  size: "sm",
+                })}
               >
                 Saved
               </Link>
