@@ -31,6 +31,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "predeploy": "VITE_BASE_PATH=/team-studyplanshare/ pnpm run build",
+    "deploy": "gh-pages -d dist",
     "test": "echo \"No test runner configured\""
   },
   "browserslist": {
@@ -49,6 +51,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/router-plugin": "^1.166.3",
     "@vitejs/plugin-react": "^4.7.0",
+    "gh-pages": "^6.3.0",
     "tailwindcss": "^4.1.13",
     "vite": "^6.4.0"
   }

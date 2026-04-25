@@ -83,13 +83,13 @@ cd client && npm start
 
 ## Deployment
 
-To deploy to Firebase:
-```
-firebase deploy
+Client deployment is handled through GitHub Pages:
+
+```sh
+cd client
+pnpm run deploy
 ```
 
-To deploy the React client to GitHub Pages:
+Pushes or merges to `dev` also trigger GitHub Pages deployment through the workflow in [`.github/workflows/deploy-client.yml`](./.github/workflows/deploy-client.yml).
 
-1. In your repository settings, set **Pages** source to **GitHub Actions**.
-2. Push to `main`.
-3. The workflow at [`.github/workflows/deploy-client.yml`](./.github/workflows/deploy-client.yml) builds `client/` with the correct repo-relative base path and publishes `client/dist` to Pages.
+That workflow builds the Vite app with the repo-relative base path and publishes `client/dist` to GitHub Pages.
