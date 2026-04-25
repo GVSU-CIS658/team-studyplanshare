@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StudyPlanShare</title>
+    <script>
+      (function () {
+        var pathname = window.location.pathname;
+        var segments = pathname.split("/").filter(Boolean);
+        var basePath = segments.length > 1 ? "/" + segments[0] : "";
+        var pathAfterBase = pathname.slice(basePath.length);
+        var target =
+          basePath +
+          "/?p=" +
+          encodeURIComponent(
+            pathAfterBase + window.location.search + window.location.hash,
+          );
+
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
