@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -50,14 +49,11 @@ const browseRoute = createRoute({
   path: "/browse",
   beforeLoad: ({ context, location }) => {
     if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
+      sessionStorage.setItem(REDIRECT_KEY, `${location.pathname}${location.searchStr}`);
       throw redirect({ to: "/login" });
     }
   },
-  component: () => <div> Browse(protected)</div>,
+  component: () => <div>Browse (protected)</div>,
 });
 
 const studyPlansRoute = createRoute({
@@ -138,18 +134,34 @@ const savedPlansRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
+  beforeLoad: ({ context }) => {
+    // Redirect authenticated users away from login page
+    if (!context.auth.loading && context.auth.user) {
+      throw redirect({ to: "/" });
+    }
+  },
   component: LoginPage,
 });
 
 const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/register",
+  beforeLoad: ({ context }) => {
+    if (!context.auth.loading && context.auth.user) {
+      throw redirect({ to: "/" });
+    }
+  },
   component: RegisterPage,
 });
 
 const forgotPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/forgot-password",
+  beforeLoad: ({ context }) => {
+    if (!context.auth.loading && context.auth.user) {
+      throw redirect({ to: "/" });
+    }
+  },
   component: ForgotPasswordPage,
 });
 

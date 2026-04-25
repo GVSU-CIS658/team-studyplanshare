@@ -33,7 +33,6 @@ async function finalizeAuthenticatedUser(user: User) {
   } catch (error) {
     console.error("Failed to ensure user record after authentication", error);
   }
-
   return mapFirebaseUserToAuthUser(user);
 }
 
@@ -58,7 +57,6 @@ export async function loginWithEmail(email: string, password: string) {
 export async function loginWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-
   await signInWithRedirect(auth, provider);
 }
 
@@ -66,22 +64,22 @@ export async function loginWithGithub() {
   const provider = new GithubAuthProvider();
   provider.addScope("read:user");
   provider.addScope("user:email");
-
   await signInWithRedirect(auth, provider);
 }
 
 export async function completeRedirectAuth() {
-  const userCredential = await getRedirectResult(auth);
-  if (userCredential?.user) {
-    return finalizeAuthenticatedUser(userCredential.user);
+  try {
+    const userCredential = await getRedirectResult(auth);
+    if (userCredential?.user) {
+      return finalizeAuthenticatedUser(userCredential.user);
+    }
+    return null;
+  } catch (error) {
+    console.error("completeRedirectAuth error:", error);
+    return null;
   }
-
-  if (auth.currentUser) {
-    return finalizeAuthenticatedUser(auth.currentUser);
-  }
-
-  return null;
 }
+
 export async function logout() {
   await signOut(auth);
 }
@@ -94,9 +92,7 @@ export async function getCurrentIdToken(
   forceRefresh = false,
 ): Promise<string | null> {
   const user = auth.currentUser;
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
   return await user.getIdToken(forceRefresh);
 }
 

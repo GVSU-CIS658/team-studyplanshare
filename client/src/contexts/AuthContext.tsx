@@ -31,8 +31,6 @@ export interface AuthContextValue {
   logout: () => Promise<void>;
 }
 
-const LEGACY_AUTH_STORAGE_KEYS = ["sps.auth.idToken", "sps.auth.uid"];
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -41,50 +39,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    LEGACY_AUTH_STORAGE_KEYS.forEach((key) => {
-      localStorage.removeItem(key);
-    });
-  }, []);
+    let isActive = true;
+    let unsubscribe: (() => void) | null = null;
 
-  useEffect(() => {
-    let active = true;
-    const unsubscribe = onAuthStateChangedListener(async (nextUser) => {
-      if (!active) return;
+    // Subscribe to auth state changes first
+    unsubscribe = onAuthStateChangedListener(async (nextUser) => {
+      if (!isActive) return;
 
-      setUser(nextUser);
+      console.log("[AUTH] State changed:", nextUser?.uid || "null");
 
-      if (nextUser) {
-        const token = await getCurrentIdToken();
-        if (!active) return;
-        setIdToken(token);
-      } else {
-        setIdToken(null);
+      try {
+        setUser(nextUser);
+        if (nextUser) {
+          const token = await getCurrentIdToken();
+          if (!isActive) return;
+          setIdToken(token);
+        } else {
+          setIdToken(null);
+        }
+      } catch (error) {
+        console.error("[AUTH] Token error:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
-    void completeRedirectAuth()
-      .then(async (redirectUser) => {
-        if (!active || !redirectUser) return;
-
-        setUser(redirectUser);
-        const token = await getCurrentIdToken();
-        if (!active) return;
-        setIdToken(token);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Failed to complete redirect auth", error);
-        if (!active) return;
-        setLoading(false);
-      });
+    // Check for OAuth redirect result (completes the redirect flow)
+    completeRedirectAuth().catch((error) => {
+      console.error("[AUTH] Redirect auth error:", error);
+    });
 
     return () => {
-      active = false;
-      unsubscribe();
+      isActive = false;
+      if (unsubscribe) unsubscribe();
     };
   }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const nextUser = await loginWithEmail(email, password);
     const token = await getCurrentIdToken();
@@ -112,6 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(nextUser);
     setIdToken(token);
   }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -124,17 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       logout,
       register,
     }),
-    [
-      user,
-      idToken,
-      user?.uid,
-      register,
-      login,
-      loginWithGithubAccount,
-      loginWithGoogleAccount,
-      logout,
-      loading,
-    ],
+    [user, idToken, loading, login, loginWithGithubAccount, loginWithGoogleAccount, logout, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
