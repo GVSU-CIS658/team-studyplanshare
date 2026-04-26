@@ -99,15 +99,10 @@ function RegisterPage() {
           </Button>
         </div>
         <Card className="w-full max-w-md mx-auto border-0 shadow-xl">
-          <CardHeader className="pb-4 space-y-2 text-center">
-            <div className="flex flex-col gap-2">
-              <span className="text-3xl font-extrabold tracking-tight text-primary">
-                StudyPlanShare
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">
-                Create your free account
-              </span>
-            </div>
+          <CardHeader className="pb-4 text-center">
+            <span className="text-sm font-medium text-muted-foreground">
+              Create your free account
+            </span>
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit} className="space-y-5">
