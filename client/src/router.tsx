@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -16,6 +15,8 @@ import StudyPlansPage from "./pages/StudyPlans";
 import PlanFormPage from "./pages/PlanForm";
 import ProfilePage from "./pages/Profile";
 import SavedPlansPage from "./pages/SavedPlans";
+import { appBasePath } from "./lib/basePath";
+import { setRedirectTarget } from "./lib/authRedirect";
 
 type RouterContext = {
   auth: {
@@ -23,8 +24,6 @@ type RouterContext = {
     loading: boolean;
   };
 };
-
-const REDIRECT_KEY = "sps.redirectAfterLogin";
 
 const RootLayout = () => {
   return (
@@ -38,6 +37,19 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
 });
 
+const requireAuth = ({ context, location }: { context: RouterContext; location: { pathname: string; searchStr: string } }) => {
+  if (!context.auth.loading && !context.auth.user) {
+    setRedirectTarget(location.pathname, location.searchStr);
+    throw redirect({ to: "/login" });
+  }
+};
+
+const requireGuest = ({ context }: { context: RouterContext }) => {
+  if (!context.auth.loading && context.auth.user) {
+    throw redirect({ to: "/" });
+  }
+};
+
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
@@ -47,108 +59,63 @@ const homeRoute = createRoute({
 const browseRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/browse",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
-  component: () => <div> Browse(protected)</div>,
+  beforeLoad: requireAuth,
+  component: () => <div>Browse (protected)</div>,
 });
 
 const studyPlansRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/study-plans",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: StudyPlansPage,
 });
 
 const studyPlanNewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/study-plans/new",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: PlanFormPage,
 });
 
 const studyPlanEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/study-plans/$planId/edit",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: PlanFormPage,
 });
 
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/profile",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: ProfilePage,
 });
 
 const savedPlansRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/saved-plans",
-  beforeLoad: ({ context, location }) => {
-    if (!context.auth.loading && !context.auth.user) {
-      sessionStorage.setItem(
-        REDIRECT_KEY,
-        `${location.pathname}${location.searchStr}`,
-      );
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: SavedPlansPage,
 });
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
+  beforeLoad: requireGuest,
   component: LoginPage,
 });
 
 const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/register",
+  beforeLoad: requireGuest,
   component: RegisterPage,
 });
 
 const forgotPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/forgot-password",
+  beforeLoad: requireGuest,
   component: ForgotPasswordPage,
 });
 
@@ -167,6 +134,7 @@ const routeTree = rootRoute.addChildren([
 
 export const router = createRouter({
   routeTree,
+  basepath: appBasePath,
   context: {
     auth: {
       user: null,
@@ -174,8 +142,6 @@ export const router = createRouter({
     },
   },
 });
-
-export { REDIRECT_KEY };
 
 declare module "@tanstack/react-router" {
   interface Register {
