@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   ArrowRight,
-  BookOpen,
   Bookmark,
   BookmarkCheck,
+  Eye,
   LogOut,
   Search,
   ThumbsDown,
@@ -12,20 +12,11 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import RichTextContent from "../components/RichTextContent";
 import { useAuth } from "../hooks/useAuth";
-import { getApiErrorMessage } from "../services/apiClient";
-import {
-  getAllStudyPlans,
-  removeStudyPlanVote,
-  StudyPlan,
-  StudyPlanVote,
-  voteStudyPlan,
-} from "../services/studyPlanService";
-import {
-  getSavedPlans,
-  savePlan,
-  removeSavedPlan,
-} from "../services/savedPlanService";
+import { useStudyPlans } from "../hooks/useStudyPlans";
+import { useVotes } from "../hooks/useVotes";
+import { useSavedPlans } from "../hooks/useSavedPlans";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -37,108 +28,63 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatWelcomeName } from "@/lib/utils";
+import { withAppBasePath } from "../lib/basePath";
+import type { StudyPlan } from "../services/studyPlanService";
 
-const DEFAULT_PLAN_IMAGE = "/images/studyplan.png";
-
-function getVoteState(plan: StudyPlan): StudyPlanVote {
-  if (plan.myVote === "up" || plan.myVote === "down") {
-    return plan.myVote;
-  }
-
-  return null;
-}
-
-function getVoteMessage(
-  user: typeof import("@/hooks/useAuth").useAuth extends () => infer R
-    ? R extends { user: infer U }
-      ? U
-      : never
-    : never,
-): string {
-  if (!user) {
-    return "Login to upvote or downvote.";
-  }
-
-  return "";
-}
+const DEFAULT_PLAN_IMAGE = withAppBasePath("/images/studyplan.png");
 
 function HomePage() {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
-  const [plans, setPlans] = useState<StudyPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
-  const [savedPlanMap, setSavedPlanMap] = useState<Map<string, string>>(
-    new Map(),
-  );
-  const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"popular" | "newest" | "oldest" | "az">(
-    "popular",
-  );
+  const [selectedPlan, setSelectedPlan] = useState<StudyPlan | null>(null);
 
-  const displayedPlans = useMemo(() => {
-    let result = plans;
+  const {
+    displayedPlans,
+    loading,
+    error,
+    search,
+    setSearch,
+    sortBy,
+    setSortBy,
+    loadPlans,
+    updatePlan,
+    clearError,
+  } = useStudyPlans();
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.courseName.toLowerCase().includes(q) ||
-          p.semester.toLowerCase().includes(q),
-      );
-    }
+  const { busyPlanId, vote, getVoteState } = useVotes({
+    userId: user?.uid,
+    authLoading,
+    onRequireAuth: () => router.navigate({ to: "/login" }),
+    onError: clearError,
+    onPlanUpdate: updatePlan,
+    onReload: loadPlans,
+  });
 
-    return [...result].sort((a, b) => {
-      switch (sortBy) {
-        case "popular":
-          return (
-            (b.score ?? b.upvoteCount ?? 0) - (a.score ?? a.upvoteCount ?? 0)
-          );
-        case "newest":
-          return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
-        case "oldest":
-          return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
-        case "az":
-          return a.title.localeCompare(b.title);
-        default:
-          return 0;
-      }
-    });
-  }, [plans, search, sortBy]);
+  const {
+    savedPlanMap,
+    savingPlanId,
+    loadSavedPlans,
+    toggleSave,
+    isSaved,
+    isSaving,
+  } = useSavedPlans({
+    userId: user?.uid,
+    onRequireAuth: () => router.navigate({ to: "/login" }),
+    onError: clearError,
+  });
 
   const firstName =
     formatWelcomeName(user?.name) ||
     formatWelcomeName(user?.email?.split("@")[0]) ||
     "there";
-
-  const loadPlans = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await getAllStudyPlans();
-      setPlans(data);
-    } catch (loadError) {
-      setError(getApiErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSavedPlans = async () => {
-    if (!user) return;
-    try {
-      const saves = await getSavedPlans();
-      setSavedPlanMap(new Map(saves.map((s) => [s.planId, s.id])));
-    } catch {
-      // Non-critical, don't block the page
-    }
-  };
 
   useEffect(() => {
     loadPlans();
@@ -147,7 +93,6 @@ function HomePage() {
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
-
     setIsLoggingOut(true);
     try {
       await logout();
@@ -157,110 +102,15 @@ function HomePage() {
     }
   };
 
-  const handleVote = async (plan: StudyPlan, direction: "up" | "down") => {
-    if (authLoading) return;
-
-    if (!user) {
-      await router.navigate({ to: "/login" });
-      return;
-    }
-
-    if (busyPlanId) return;
-
-    setBusyPlanId(plan.id);
-    setError(null);
-
-    try {
-      if (plan.myVote === direction) {
-        // Toggle off: remove existing vote
-        await removeStudyPlanVote(plan.id);
-        const scoreDelta = direction === "up" ? -1 : 1;
-        setPlans((prev) =>
-          prev.map((item) =>
-            item.id === plan.id
-              ? {
-                  ...item,
-                  myVote: null,
-                  score: (item.score ?? 0) + scoreDelta,
-                  upvoteCount:
-                    direction === "up"
-                      ? Math.max(0, (item.upvoteCount || 0) - 1)
-                      : item.upvoteCount,
-                  downvoteCount:
-                    direction === "down"
-                      ? Math.max(0, (item.downvoteCount || 0) - 1)
-                      : item.downvoteCount,
-                }
-              : item,
-          ),
-        );
-      } else {
-        // Cast or change vote
-        await voteStudyPlan(plan.id, direction);
-        setPlans((prev) =>
-          prev.map((item) => {
-            if (item.id !== plan.id) return item;
-            const prevVote = item.myVote;
-            const scoreDelta =
-              (direction === "up" ? 1 : -1) -
-              (prevVote === "up" ? 1 : prevVote === "down" ? -1 : 0);
-            return {
-              ...item,
-              myVote: direction,
-              score: (item.score ?? 0) + scoreDelta,
-              upvoteCount:
-                (item.upvoteCount || 0) +
-                (direction === "up" ? 1 : 0) -
-                (prevVote === "up" ? 1 : 0),
-              downvoteCount:
-                (item.downvoteCount || 0) +
-                (direction === "down" ? 1 : 0) -
-                (prevVote === "down" ? 1 : 0),
-            };
-          }),
-        );
-      }
-    } catch (voteError) {
-      setError(getApiErrorMessage(voteError));
-      await loadPlans();
-    } finally {
-      setBusyPlanId(null);
-    }
-  };
-
-  const handleToggleSave = async (planId: string) => {
-    if (!user) {
-      await router.navigate({ to: "/login" });
-      return;
-    }
-    if (savingPlanId) return;
-
-    setSavingPlanId(planId);
-    setError(null);
-
-    try {
-      const existingSaveId = savedPlanMap.get(planId);
-      if (existingSaveId) {
-        await removeSavedPlan(existingSaveId);
-        setSavedPlanMap((prev) => {
-          const next = new Map(prev);
-          next.delete(planId);
-          return next;
-        });
-      } else {
-        const saved = await savePlan(planId);
-        setSavedPlanMap((prev) => new Map(prev).set(planId, saved.id));
-      }
-    } catch (saveError) {
-      setError(getApiErrorMessage(saveError));
-    } finally {
-      setSavingPlanId(null);
-    }
-  };
+  const hasPlans = !loading && displayedPlans.length > 0;
+  const showEmptyState =
+    !loading && displayedPlans.length === 0 && search.trim() === "";
+  const showNoResults =
+    !loading && displayedPlans.length === 0 && search.trim() !== "";
 
   return (
     <Layout>
-      <ErrorToast message={error} onClose={() => setError(null)} />
+      <ErrorToast message={error} onClose={clearError} />
       <section className="space-y-6">
         <Card className="overflow-hidden shadow-sm border-border/70 bg-linear-to-br from-sky-50 via-white to-emerald-50">
           <CardHeader className="gap-5 p-5 sm:p-6 lg:grid lg:grid-cols-[1.3fr_auto] lg:items-end">
@@ -330,16 +180,25 @@ function HomePage() {
               className="pl-8"
             />
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <BookOpen className="w-4 h-4" />
-            Simple list with optional plan images
-          </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="popular">Most Popular</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="az">A-Z</option>
+          </select>
         </div>
 
         {(loading || authLoading) && (
           <div className="grid gap-4 lg:grid-cols-2">
             {[0, 1].map((i) => (
-              <div key={i} className="animate-pulse space-y-3 rounded-lg border border-border/70 p-0 overflow-hidden">
+              <div
+                key={i}
+                className="animate-pulse space-y-3 rounded-lg border border-border/70 p-0 overflow-hidden"
+              >
                 <div className="h-44 sm:h-52 lg:h-56 bg-muted" />
                 <div className="space-y-3 p-5">
                   <div className="h-3 w-1/3 rounded bg-muted" />
@@ -352,33 +211,29 @@ function HomePage() {
           </div>
         )}
 
-        {!loading && plans.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-semibold text-slate-900">No shared plans yet</h3>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Be the first to share a study plan with your classmates. Create one from your plans page and publish it.
-            </p>
-          </div>
+        {showEmptyState && (
+          <Card>
+            <CardContent className="p-4 text-sm text-muted-foreground">
+              No shared study plans yet.
+            </CardContent>
+          </Card>
         )}
 
-        {!loading && plans.length > 0 && displayedPlans.length === 0 && (
+        {showNoResults && (
           <p className="text-sm text-muted-foreground">
             No plans match your search.
           </p>
         )}
 
-        {!loading && !authLoading && displayedPlans.length > 0 && (
+        {hasPlans && (
           <div className="grid gap-4 lg:grid-cols-2">
             {displayedPlans.map((plan) => {
               const voteState = getVoteState(plan);
               const hasUpvoted = voteState === "up";
               const hasDownvoted = voteState === "down";
               const isBusy = busyPlanId === plan.id;
-              const isSaved = savedPlanMap.has(plan.id);
-              const isSaving = savingPlanId === plan.id;
-
-              const voteMessage = getVoteMessage(user);
+              const saved = isSaved(plan.id);
+              const saving = isSaving(plan.id);
 
               return (
                 <Card
@@ -389,8 +244,8 @@ function HomePage() {
                     <img
                       src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
                       alt={plan.title}
-                      onError={(event) => {
-                        event.currentTarget.src = DEFAULT_PLAN_IMAGE;
+                      onError={(e) => {
+                        e.currentTarget.src = DEFAULT_PLAN_IMAGE;
                       }}
                       className="object-cover w-full h-44 sm:h-52 lg:h-56"
                     />
@@ -405,9 +260,10 @@ function HomePage() {
                         <h3 className="text-xl font-semibold text-slate-900">
                           {plan.title}
                         </h3>
-                        <p className="text-sm leading-6 text-slate-600">
-                          {plan.description}
-                        </p>
+                        <RichTextContent
+                          content={plan.description}
+                          className="text-sm leading-6 text-slate-600 sps-rich-text-preview"
+                        />
                       </div>
 
                       <div className="px-3 py-3 mt-auto space-y-3 rounded-xl bg-slate-50">
@@ -416,15 +272,26 @@ function HomePage() {
                             <span className="font-bold">Score:</span>{" "}
                             {plan.score ?? plan.upvoteCount ?? 0}
                           </p>
-                          <Link
-                            to="/study-plans"
-                            className={buttonVariants({
-                              variant: "outline",
-                              size: "sm",
-                            })}
-                          >
-                            Open plans
-                          </Link>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedPlan(plan)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                            <Link
+                              to="/study-plans"
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
+                            >
+                              Open plans
+                            </Link>
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -435,7 +302,7 @@ function HomePage() {
                                 size="icon"
                                 variant={hasUpvoted ? "default" : "outline"}
                                 disabled={isBusy || authLoading}
-                                onClick={() => handleVote(plan, "up")}
+                                onClick={() => vote(plan, "up")}
                                 className={`h-8 w-8 ${
                                   hasUpvoted
                                     ? "bg-emerald-600 hover:bg-emerald-700"
@@ -460,7 +327,7 @@ function HomePage() {
                                 size="icon"
                                 variant={hasDownvoted ? "default" : "outline"}
                                 disabled={isBusy || authLoading}
-                                onClick={() => handleVote(plan, "down")}
+                                onClick={() => vote(plan, "down")}
                                 className={`h-8 w-8 ${
                                   hasDownvoted
                                     ? "bg-rose-600 hover:bg-rose-700"
@@ -483,17 +350,15 @@ function HomePage() {
                           <Button
                             type="button"
                             size="icon"
-                            variant={isSaved ? "default" : "outline"}
-                            disabled={isSaving}
-                            onClick={() => handleToggleSave(plan.id)}
+                            variant={saved ? "default" : "outline"}
+                            disabled={saving}
+                            onClick={() => toggleSave(plan.id)}
                             className="w-8 h-8"
                             style={
-                              isSaved
-                                ? { backgroundColor: "#2563eb" }
-                                : undefined
+                              saved ? { backgroundColor: "#2563eb" } : undefined
                             }
                           >
-                            {isSaved ? (
+                            {saved ? (
                               <BookmarkCheck className="w-4 h-4 text-white" />
                             ) : (
                               <Bookmark className="w-4 h-4 text-slate-400" />
@@ -501,9 +366,9 @@ function HomePage() {
                           </Button>
                         </div>
 
-                        {voteMessage && (
+                        {!user && (
                           <p className="text-xs text-muted-foreground">
-                            {voteMessage}
+                            Login to upvote or downvote.
                           </p>
                         )}
                       </div>
@@ -514,6 +379,46 @@ function HomePage() {
             })}
           </div>
         )}
+
+        <Dialog
+          open={selectedPlan !== null}
+          onOpenChange={(open) => !open && setSelectedPlan(null)}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
+            {selectedPlan && (
+              <>
+                <img
+                  src={selectedPlan.imageUrl || DEFAULT_PLAN_IMAGE}
+                  alt={selectedPlan.title}
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_PLAN_IMAGE;
+                  }}
+                  className="object-cover w-full h-48"
+                />
+
+                <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-12rem)]">
+                  <DialogHeader className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-sky-700">
+                      <span>{selectedPlan.courseName}</span>
+                      <span className="text-slate-300">•</span>
+                      <span>{selectedPlan.semester}</span>
+                    </div>
+                    <DialogTitle className="text-xl font-semibold text-slate-900">
+                      {selectedPlan.title}
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  <div className="sps-rich-text">
+                    <RichTextContent
+                      content={selectedPlan.description}
+                      className="text-sm leading-6 text-slate-700"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </section>
     </Layout>
   );

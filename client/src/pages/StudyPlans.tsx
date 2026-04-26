@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout";
+import RichTextContent from "../components/RichTextContent";
 import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
 import {
@@ -23,7 +24,9 @@ import { Link } from "@tanstack/react-router";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_PLAN_IMAGE = "/images/studyplan.png";
+import { withAppBasePath } from "../lib/basePath";
+
+const DEFAULT_PLAN_IMAGE = withAppBasePath("/images/studyplan.png");
 
 const statusOptions = [
   {
@@ -207,7 +210,9 @@ function StudyPlansPage() {
                 <Button
                   key={option.value}
                   type="button"
-                  variant={activeFilter === option.value ? "default" : "outline"}
+                  variant={
+                    activeFilter === option.value ? "default" : "outline"
+                  }
                   size="sm"
                   onClick={() => setActiveFilter(option.value)}
                   disabled={busy}
@@ -248,11 +253,14 @@ function StudyPlansPage() {
               </div>
             )}
 
-            {!loading && !authLoading && plans.length > 0 && filteredPlans.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No plans match the current filter.
-              </p>
-            )}
+            {!loading &&
+              !authLoading &&
+              plans.length > 0 &&
+              filteredPlans.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No plans match the current filter.
+                </p>
+              )}
 
             {!loading && !authLoading && filteredPlans.length > 0 && (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -261,7 +269,9 @@ function StudyPlansPage() {
                     <img
                       src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
                       alt={plan.title}
-                      onError={(e) => { e.currentTarget.src = DEFAULT_PLAN_IMAGE; }}
+                      onError={(e) => {
+                        e.currentTarget.src = DEFAULT_PLAN_IMAGE;
+                      }}
                       className="h-40 w-full object-cover"
                     />
                     <CardContent className="flex flex-col gap-3 p-4">
@@ -277,9 +287,10 @@ function StudyPlansPage() {
                             {formatStatusLabel(plan.status)}
                           </Badge>
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                          {plan.description}
-                        </p>
+                        <RichTextContent
+                          content={plan.description}
+                          className="mt-1 text-xs text-muted-foreground sps-rich-text-preview"
+                        />
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {getQuickStatusActions(plan.status).map((status) => (
@@ -308,7 +319,10 @@ function StudyPlansPage() {
                         <Link
                           to="/study-plans/$planId/edit"
                           params={{ planId: plan.id }}
-                          className={buttonVariants({ variant: "outline", size: "sm" })}
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                          })}
                         >
                           Edit
                         </Link>

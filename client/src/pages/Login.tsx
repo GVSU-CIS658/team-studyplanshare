@@ -1,9 +1,10 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, Link } from "@tanstack/react-router";
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
-import { REDIRECT_KEY } from "../router";
+import { getRedirectTarget, clearRedirectTarget } from "../lib/authRedirect";
+import { withAppBasePath } from "../lib/basePath";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -18,11 +19,7 @@ import { ArrowLeft, Github } from "lucide-react";
 
 function GoogleIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5 shrink-0"
-      viewBox="0 0 24 24"
-    >
+    <svg aria-hidden="true" className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
       <path
         d="M21.805 10.023H12.24v3.955h5.48c-.236 1.273-.96 2.352-2.007 3.075v2.55h3.255c1.906-1.755 3.007-4.338 3.007-7.403 0-.72-.065-1.41-.17-2.077Z"
         fill="#4285F4"
@@ -53,29 +50,34 @@ function LoginPage() {
   const [isGithubSubmitting, setIsGithubSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  const redirectToPath = (path: string) => {
+    clearRedirectTarget();
+    globalThis.location.replace(withAppBasePath(path));
+  };
+
+  // Redirect to home when authenticated
+  useEffect(() => {
+    if (!user) return;
+
+    const redirectPath = getRedirectTarget("/");
+    redirectToPath(redirectPath);
+  }, [loading, user, router]);
+
   const canSubmit = useMemo(
     () => email.trim().length > 0 && password.length > 0 && !isSubmitting,
     [email, password, isSubmitting],
   );
 
-  useEffect(() => {
-    if (loading || !user) return;
-
-    const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/";
-    sessionStorage.removeItem(REDIRECT_KEY);
-    globalThis.location.replace(redirectTarget);
-  }, [loading, user]);
-
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) return;
+
     setIsSubmitting(true);
     setToast(null);
+
     try {
       await login(email.trim(), password);
-      const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/";
-      sessionStorage.removeItem(REDIRECT_KEY);
-      globalThis.location.assign(redirectTarget);
+      // Redirect handled by useEffect
     } catch (error) {
       setToast(getApiErrorMessage(error));
     } finally {
@@ -86,19 +88,20 @@ function LoginPage() {
   const handleGoBack = () => {
     if (globalThis.history.length > 1) {
       router.history.back();
-      return;
+    } else {
+      redirectToPath("/");
     }
-
-    router.navigate({ to: "/" });
   };
 
   const handleGoogleLogin = async () => {
     if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
-
     setIsGoogleSubmitting(true);
     setToast(null);
+
     try {
       await loginWithGoogle();
+      // Page will redirect to Google, then back here
+      // Auth state listener will catch the user and useEffect will redirect
     } catch (error) {
       setToast(getApiErrorMessage(error));
       setIsGoogleSubmitting(false);
@@ -107,11 +110,13 @@ function LoginPage() {
 
   const handleGithubLogin = async () => {
     if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
-
     setIsGithubSubmitting(true);
     setToast(null);
+
     try {
       await loginWithGithub();
+      // Page will redirect to GitHub, then back here
+      // Auth state listener will catch the user and useEffect will redirect
     } catch (error) {
       setToast(getApiErrorMessage(error));
       setIsGithubSubmitting(false);
@@ -120,22 +125,22 @@ function LoginPage() {
 
   return (
     <Layout>
-      <section className="relative flex min-h-[70vh] items-center justify-center rounded-3xl bg-gradient-to-br from-blue-50 via-white to-indigo-100 p-4 md:p-10 dark:from-background dark:via-background dark:to-background">
+      <section className="relative flex min-h-[70vh] items-center justify-center rounded-3xl bg-linear-to-br from-blue-50 via-white to-indigo-100 p-4 md:p-10 dark:from-background dark:via-background dark:to-background">
         <ErrorToast message={toast} onClose={() => setToast(null)} />
-        <div className="absolute left-4 top-4 md:left-6 md:top-6 z-10">
+        <div className="absolute z-10 left-4 top-4 md:left-6 md:top-6">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handleGoBack}
-            className="rounded-full bg-white/80 text-muted-foreground shadow hover:text-primary dark:bg-background/80 md:text-sm"
+            className="rounded-full shadow bg-white/80 text-muted-foreground hover:text-primary dark:bg-background/80 md:text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden xs:inline">Back Home</span>
           </Button>
         </div>
-        <Card className="mx-auto w-full max-w-md border-0 shadow-xl">
-          <CardHeader className="space-y-2 pb-4 text-center">
+        <Card className="w-full max-w-md mx-auto border-0 shadow-xl">
+          <CardHeader className="pb-4 space-y-2 text-center">
             <div className="flex flex-col gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-primary">
                 StudyPlanShare
@@ -155,10 +160,10 @@ function LoginPage() {
                     type="email"
                     autoComplete="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="m@example.com"
-                    className="rounded-none border-0 border-b bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    className="px-0 bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -168,13 +173,13 @@ function LoginPage() {
                     type="password"
                     autoComplete="current-password"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="rounded-none border-0 border-b bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    className="px-0 bg-transparent border-0 border-b rounded-none shadow-none focus-visible:ring-0"
                   />
                   <Link
                     to="/forgot-password"
-                    className="w-fit text-xs text-primary underline-offset-4 hover:underline"
+                    className="text-xs w-fit text-primary underline-offset-4 hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -183,11 +188,11 @@ function LoginPage() {
               <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="h-11 w-full rounded-full text-base font-semibold"
+                className="w-full text-base font-semibold rounded-full h-11"
               >
                 {isSubmitting ? "Logging in..." : "Login"}
               </Button>
-              <div className="pt-2 text-center text-sm text-muted-foreground">
+              <div className="pt-2 text-sm text-center text-muted-foreground">
                 <span>Or Sign Up using Social App</span>
               </div>
               <div className="flex flex-col items-center gap-3">
@@ -195,28 +200,35 @@ function LoginPage() {
                   type="button"
                   variant="outline"
                   onClick={handleGoogleLogin}
-                  disabled={isSubmitting || isGoogleSubmitting || isGithubSubmitting}
+                  disabled={
+                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                  }
                   aria-label="Sign in with Google"
-                  className="h-11 w-full rounded-full border border-border bg-white text-gray-700 font-medium shadow-sm transition-colors hover:bg-gray-50 dark:bg-white dark:text-gray-700 dark:hover:bg-gray-100"
+                  className="border rounded-full size-10 border-border bg-background hover:bg-muted"
                 >
                   <GoogleIcon />
-                  <span>{isGoogleSubmitting ? "Connecting..." : "Sign Up with Google"}</span>
+                  <span>
+                    {isGoogleSubmitting
+                      ? "Connecting..."
+                      : "Sign Up with Google"}
+                  </span>
                 </Button>
                 <Button
                   type="button"
                   variant="default"
                   onClick={handleGithubLogin}
-                  disabled={isSubmitting || isGoogleSubmitting || isGithubSubmitting}
+                  disabled={
+                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                  }
                   aria-label="Sign in with GitHub"
-                  className="h-11 w-full rounded-full border-0 bg-gray-900 text-white font-medium shadow-sm transition-colors hover:bg-gray-800 dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800"
+                  className="border rounded-full size-10 border-border bg-background text-foreground hover:bg-muted"
                 >
-                  <Github className="h-5 w-5" />
-                  <span>{isGithubSubmitting ? "Connecting..." : "Sign Up with GitHub"}</span>
+                  <Github className="w-5 h-5" />
                 </Button>
               </div>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col items-center gap-2 px-6 pb-6 pt-2">
+          <CardFooter className="flex flex-col items-center gap-2 px-6 pt-2 pb-6">
             <span className="text-sm text-muted-foreground">
               Don't have an account?
             </span>

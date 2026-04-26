@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bookmark } from "lucide-react";
 
+import RichTextContent from "../components/RichTextContent";
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
-import apiClient, { getApiErrorMessage } from "../services/apiClient";
-import { getSavedPlans, removeSavedPlan, SavedPlan } from "../services/savedPlanService";
-import { StudyPlan } from "../services/studyPlanService";
+import { getApiErrorMessage } from "../services/apiClient";
+import {
+  getSavedPlans,
+  removeSavedPlan,
+  SavedPlan,
+} from "../services/savedPlanService";
+import { getStudyPlan, StudyPlan } from "../services/studyPlanService";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ErrorToast } from "@/components/ui/error-toast";
 import {
@@ -18,7 +23,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const DEFAULT_PLAN_IMAGE = "/images/studyplan.png";
+import { withAppBasePath } from "../lib/basePath";
+
+const DEFAULT_PLAN_IMAGE = withAppBasePath("/images/studyplan.png");
 
 interface SavedPlanWithDetails extends SavedPlan {
   plan?: StudyPlan;
@@ -44,8 +51,8 @@ function SavedPlansPage() {
         const withDetails = await Promise.all(
           saves.map(async (save) => {
             try {
-              const res = await apiClient.get<StudyPlan>(`/studyPlans/${save.planId}`);
-              return { ...save, plan: res.data };
+              const plan = await getStudyPlan(save.planId);
+              return { ...save, plan };
             } catch {
               return { ...save, plan: undefined };
             }
@@ -91,7 +98,10 @@ function SavedPlansPage() {
               </CardDescription>
             </div>
             <CardAction>
-              <Link to="/" className={buttonVariants({ size: "sm", variant: "outline" })}>
+              <Link
+                to="/"
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
                 Browse plans
               </Link>
             </CardAction>
@@ -99,26 +109,20 @@ function SavedPlansPage() {
 
           <CardContent className="grid gap-3">
             {(loading || authLoading) && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[0, 1].map((i) => (
-                  <div key={i} className="animate-pulse space-y-3 rounded-lg border overflow-hidden">
-                    <div className="h-40 bg-muted" />
-                    <div className="space-y-3 p-4">
-                      <div className="h-3 w-1/3 rounded bg-muted" />
-                      <div className="h-4 w-2/3 rounded bg-muted" />
-                      <div className="h-3 w-full rounded bg-muted" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Loading saved plans...
+              </p>
             )}
 
             {!loading && !authLoading && savedPlans.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Bookmark className="h-10 w-10 text-muted-foreground/50" />
-                <h3 className="mt-3 text-base font-semibold text-slate-900">No saved plans</h3>
+                <h3 className="mt-3 text-base font-semibold text-slate-900">
+                  No saved plans
+                </h3>
                 <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-                  Plans you bookmark from the shared feed will appear here for easy access.
+                  Plans you bookmark from the shared feed will appear here for
+                  easy access.
                 </p>
               </div>
             )}
@@ -134,7 +138,9 @@ function SavedPlansPage() {
                       <img
                         src={plan?.imageUrl || DEFAULT_PLAN_IMAGE}
                         alt={plan?.title || "Study plan"}
-                        onError={(e) => { e.currentTarget.src = DEFAULT_PLAN_IMAGE; }}
+                        onError={(e) => {
+                          e.currentTarget.src = DEFAULT_PLAN_IMAGE;
+                        }}
                         className="h-40 w-full object-cover"
                       />
                       <CardContent className="flex flex-col gap-3 p-4">
@@ -147,9 +153,10 @@ function SavedPlansPage() {
                               <h3 className="mt-0.5 text-sm font-semibold line-clamp-1">
                                 {plan.title}
                               </h3>
-                              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                                {plan.description}
-                              </p>
+                              <RichTextContent
+                                content={plan.description}
+                                className="mt-1 text-xs text-muted-foreground sps-rich-text-preview"
+                              />
                             </>
                           ) : (
                             <p className="text-sm text-muted-foreground">

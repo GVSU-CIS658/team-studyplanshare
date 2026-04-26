@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Link } from "@tanstack/react-router";
 import { getApiErrorMessage } from "../services/apiClient";
 import { requestPasswordReset } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
-import { REDIRECT_KEY } from "../router";
+import { clearRedirectTarget, getRedirectTarget } from "../lib/authRedirect";
+import { withAppBasePath } from "../lib/basePath";
 
 export default function ForgotPasswordPage() {
   const { user, loading } = useAuth();
@@ -19,9 +20,9 @@ export default function ForgotPasswordPage() {
   useEffect(() => {
     if (loading || !user) return;
 
-    const redirectTarget = sessionStorage.getItem(REDIRECT_KEY) || "/";
-    sessionStorage.removeItem(REDIRECT_KEY);
-    globalThis.location.replace(redirectTarget);
+    const redirectTarget = getRedirectTarget("/");
+    clearRedirectTarget();
+    globalThis.location.replace(withAppBasePath(redirectTarget));
   }, [loading, user]);
 
   const onSubmit = async (e: React.FormEvent) => {

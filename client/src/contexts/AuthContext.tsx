@@ -9,7 +9,6 @@ import React, {
 
 import {
   AuthUser,
-  completeRedirectAuth,
   getCurrentIdToken,
   loginWithGithub,
   loginWithGoogle,
@@ -31,8 +30,6 @@ export interface AuthContextValue {
   logout: () => Promise<void>;
 }
 
-const LEGACY_AUTH_STORAGE_KEYS = ["sps.auth.idToken", "sps.auth.uid"];
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -40,78 +37,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [idToken, setIdToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    LEGACY_AUTH_STORAGE_KEYS.forEach((key) => {
-      localStorage.removeItem(key);
-    });
+  const setAuthenticatedUser = useCallback(async (nextUser: AuthUser | null, forceRefresh = false) => {
+    setUser(nextUser);
+    if (nextUser) {
+      const token = await getCurrentIdToken(forceRefresh);
+      setIdToken(token);
+    } else {
+      setIdToken(null);
+    }
   }, []);
 
   useEffect(() => {
-    let active = true;
     const unsubscribe = onAuthStateChangedListener(async (nextUser) => {
-      if (!active) return;
-
-      setUser(nextUser);
-
-      if (nextUser) {
-        const token = await getCurrentIdToken();
-        if (!active) return;
-        setIdToken(token);
-      } else {
-        setIdToken(null);
-      }
-
+      await setAuthenticatedUser(nextUser);
       setLoading(false);
     });
 
-    void completeRedirectAuth()
-      .then(async (redirectUser) => {
-        if (!active || !redirectUser) return;
+    return () => unsubscribe();
+  }, [setAuthenticatedUser]);
 
-        setUser(redirectUser);
-        const token = await getCurrentIdToken();
-        if (!active) return;
-        setIdToken(token);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Failed to complete redirect auth", error);
-        if (!active) return;
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
   const login = useCallback(async (email: string, password: string) => {
     const nextUser = await loginWithEmail(email, password);
-    const token = await getCurrentIdToken();
-    setUser(nextUser);
-    setIdToken(token);
-  }, []);
+    await setAuthenticatedUser(nextUser);
+  }, [setAuthenticatedUser]);
 
   const loginWithGoogleAccount = useCallback(async () => {
-    await loginWithGoogle();
-  }, []);
+    const nextUser = await loginWithGoogle();
+    await setAuthenticatedUser(nextUser);
+  }, [setAuthenticatedUser]);
 
   const loginWithGithubAccount = useCallback(async () => {
-    await loginWithGithub();
-  }, []);
+    const nextUser = await loginWithGithub();
+    await setAuthenticatedUser(nextUser);
+  }, [setAuthenticatedUser]);
 
   const logout = useCallback(async () => {
     await authLogout();
-    setUser(null);
-    setIdToken(null);
-  }, []);
+    await setAuthenticatedUser(null);
+  }, [setAuthenticatedUser]);
 
   const register = useCallback(async (email: string, password: string) => {
     const nextUser = await registerWithEmail(email, password);
-    const token = await getCurrentIdToken(true);
-    setUser(nextUser);
-    setIdToken(token);
-  }, []);
+    await setAuthenticatedUser(nextUser, true);
+  }, [setAuthenticatedUser]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -127,13 +96,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [
       user,
       idToken,
-      user?.uid,
-      register,
+      loading,
       login,
       loginWithGithubAccount,
       loginWithGoogleAccount,
       logout,
-      loading,
+      register,
     ],
   );
 
