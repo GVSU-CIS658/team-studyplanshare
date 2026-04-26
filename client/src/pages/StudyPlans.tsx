@@ -292,26 +292,27 @@ function StudyPlansPage() {
                           className="mt-1 text-xs text-muted-foreground sps-rich-text-preview"
                         />
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-2">
                         {getQuickStatusActions(plan.status).map((status) => (
                           <Button
                             key={status}
                             type="button"
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => onChangeStatus(plan, status)}
                             disabled={busy}
                             className={cn(
-                              "h-6 px-2 text-xs",
                               status === "published" &&
-                                "text-green-700 hover:text-green-800 hover:bg-green-50",
-                              (status === "archived" || status === "draft") &&
-                                "text-slate-500 hover:text-slate-700 hover:bg-slate-100",
+                                "border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800",
+                              status === "archived" &&
+                                "border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800",
+                              status === "draft" &&
+                                "border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-700",
                             )}
                           >
-                            {status === "draft" && "→ Draft"}
-                            {status === "published" && "→ Publish"}
-                            {status === "archived" && "→ Archive"}
+                            {status === "draft" && "Move to Draft"}
+                            {status === "published" && "Publish"}
+                            {status === "archived" && "Archive"}
                           </Button>
                         ))}
                       </div>
