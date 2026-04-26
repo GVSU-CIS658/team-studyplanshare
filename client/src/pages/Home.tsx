@@ -123,7 +123,7 @@ function HomePage() {
               </Badge>
               <div className="space-y-2">
                 <CardTitle className="text-3xl leading-tight text-slate-900 sm:text-4xl">
-                  {user ? `Welcome back, ${firstName}` : "StudyPlanShare"}
+                  {user ? `Welcome back, ${firstName}` : "Discover Study Plans"}
                 </CardTitle>
                 <CardDescription className="max-w-2xl text-sm leading-6 text-slate-600">
                   Browse the latest plans your classmates shared, open your own
