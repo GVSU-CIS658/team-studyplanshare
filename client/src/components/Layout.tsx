@@ -8,6 +8,7 @@ import { Button, buttonVariants } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -43,16 +44,18 @@ export default function Layout({ children }) {
             <Avatar alt={user.name || user.email || "User"} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>{user.name || user.email}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => router.navigate({ to: "/profile" })}
-            >
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onClick={handleLogout}>
-              Logout
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>{user.name || user.email}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.navigate({ to: "/profile" })}
+              >
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -73,7 +76,13 @@ export default function Layout({ children }) {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 w-full border-b border-border bg-white/90 backdrop-blur dark:bg-background/90">
         <div className="flex items-center justify-between w-full max-w-6xl gap-4 px-4 py-4 mx-auto sm:px-6">
-          <Link to="/" className="text-lg font-bold tracking-tight">
+          <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <svg className="w-6 h-6 shrink-0" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="6" fill="#4f46e5" />
+              <path d="M7 8a2 2 0 0 1 2-2h6l1 2h7a2 2 0 0 1 2 2v4H7V8z" fill="#a5b4fc" />
+              <rect x="7" y="13" width="18" height="13" rx="1" fill="#e0e7ff" />
+              <path d="M11 17h10M11 20h7" stroke="#4f46e5" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
             StudyPlanShare
           </Link>
 

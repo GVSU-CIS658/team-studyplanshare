@@ -93,35 +93,39 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleOAuthLogin = async (
+    provider: "google" | "github",
+  ) => {
     if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
-    setIsGoogleSubmitting(true);
+
+    const setSubmitting =
+      provider === "google" ? setIsGoogleSubmitting : setIsGithubSubmitting;
+    const loginFn = provider === "google" ? loginWithGoogle : loginWithGithub;
+
+    setSubmitting(true);
     setToast(null);
 
+    // When the user closes the popup, the browser window regains focus
+    // well before Firebase detects the closure. Reset state on focus.
+    const onFocus = () => setSubmitting(false);
+    window.addEventListener("focus", onFocus);
+
     try {
-      await loginWithGoogle();
-      // Page will redirect to Google, then back here
-      // Auth state listener will catch the user and useEffect will redirect
-    } catch (error) {
-      setToast(getApiErrorMessage(error));
-      setIsGoogleSubmitting(false);
+      await loginFn();
+    } catch (error: unknown) {
+      // Don't show a toast for user-cancelled popups
+      const code = (error as { code?: string }).code;
+      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
+        setToast(getApiErrorMessage(error));
+      }
+    } finally {
+      window.removeEventListener("focus", onFocus);
+      setSubmitting(false);
     }
   };
 
-  const handleGithubLogin = async () => {
-    if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
-    setIsGithubSubmitting(true);
-    setToast(null);
-
-    try {
-      await loginWithGithub();
-      // Page will redirect to GitHub, then back here
-      // Auth state listener will catch the user and useEffect will redirect
-    } catch (error) {
-      setToast(getApiErrorMessage(error));
-      setIsGithubSubmitting(false);
-    }
-  };
+  const handleGoogleLogin = () => handleOAuthLogin("google");
+  const handleGithubLogin = () => handleOAuthLogin("github");
 
   return (
     <Layout>
@@ -140,15 +144,10 @@ function LoginPage() {
           </Button>
         </div>
         <Card className="w-full max-w-md mx-auto border-0 shadow-xl">
-          <CardHeader className="pb-4 space-y-2 text-center">
-            <div className="flex flex-col gap-2">
-              <span className="text-3xl font-extrabold tracking-tight text-primary">
-                StudyPlanShare
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">
-                Welcome back! Please sign in to continue.
-              </span>
-            </div>
+          <CardHeader className="pb-4 text-center">
+            <span className="text-sm font-medium text-muted-foreground">
+              Welcome back! Please sign in to continue.
+            </span>
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit} className="space-y-5">
@@ -192,40 +191,6 @@ function LoginPage() {
               >
                 {isSubmitting ? "Logging in..." : "Login"}
               </Button>
-              <div className="pt-2 text-sm text-center text-muted-foreground">
-                <span>Or Sign Up using Social App</span>
-              </div>
-              <div className="flex flex-col items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGoogleLogin}
-                  disabled={
-                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
-                  }
-                  aria-label="Sign in with Google"
-                  className="border rounded-full size-10 border-border bg-background hover:bg-muted"
-                >
-                  <GoogleIcon />
-                  <span>
-                    {isGoogleSubmitting
-                      ? "Connecting..."
-                      : "Sign Up with Google"}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleGithubLogin}
-                  disabled={
-                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
-                  }
-                  aria-label="Sign in with GitHub"
-                  className="border rounded-full size-10 border-border bg-background text-foreground hover:bg-muted"
-                >
-                  <Github className="w-5 h-5" />
-                </Button>
-              </div>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col items-center gap-2 px-6 pt-2 pb-6">
@@ -241,6 +206,45 @@ function LoginPage() {
             >
               Sign up
             </Link>
+            <div className="pt-2 text-sm text-center text-muted-foreground">
+              <span>Or sign in using social app</span>
+            </div>
+            <div className="flex flex-col w-full items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGoogleLogin}
+                disabled={
+                  isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                }
+                aria-label="Sign in with Google"
+                className="w-full gap-2 rounded-full border border-border bg-background hover:bg-muted"
+              >
+                <GoogleIcon />
+                <span>
+                  {isGoogleSubmitting
+                    ? "Connecting..."
+                    : "Sign in with Google"}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGithubLogin}
+                disabled={
+                  isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                }
+                aria-label="Sign in with GitHub"
+                className="w-full gap-2 rounded-full border border-border bg-background text-foreground hover:bg-muted"
+              >
+                <Github className="w-5 h-5" />
+                <span>
+                  {isGithubSubmitting
+                    ? "Connecting..."
+                    : "Sign in with GitHub"}
+                </span>
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </section>
