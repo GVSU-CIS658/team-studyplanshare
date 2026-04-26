@@ -93,35 +93,39 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleOAuthLogin = async (
+    provider: "google" | "github",
+  ) => {
     if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
-    setIsGoogleSubmitting(true);
+
+    const setSubmitting =
+      provider === "google" ? setIsGoogleSubmitting : setIsGithubSubmitting;
+    const loginFn = provider === "google" ? loginWithGoogle : loginWithGithub;
+
+    setSubmitting(true);
     setToast(null);
 
+    // When the user closes the popup, the browser window regains focus
+    // well before Firebase detects the closure. Reset state on focus.
+    const onFocus = () => setSubmitting(false);
+    window.addEventListener("focus", onFocus);
+
     try {
-      await loginWithGoogle();
-      // Page will redirect to Google, then back here
-      // Auth state listener will catch the user and useEffect will redirect
-    } catch (error) {
-      setToast(getApiErrorMessage(error));
-      setIsGoogleSubmitting(false);
+      await loginFn();
+    } catch (error: unknown) {
+      // Don't show a toast for user-cancelled popups
+      const code = (error as { code?: string }).code;
+      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
+        setToast(getApiErrorMessage(error));
+      }
+    } finally {
+      window.removeEventListener("focus", onFocus);
+      setSubmitting(false);
     }
   };
 
-  const handleGithubLogin = async () => {
-    if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
-    setIsGithubSubmitting(true);
-    setToast(null);
-
-    try {
-      await loginWithGithub();
-      // Page will redirect to GitHub, then back here
-      // Auth state listener will catch the user and useEffect will redirect
-    } catch (error) {
-      setToast(getApiErrorMessage(error));
-      setIsGithubSubmitting(false);
-    }
-  };
+  const handleGoogleLogin = () => handleOAuthLogin("google");
+  const handleGithubLogin = () => handleOAuthLogin("github");
 
   return (
     <Layout>
