@@ -3,7 +3,8 @@ import { useRouter, Link } from "@tanstack/react-router";
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
 import { getApiErrorMessage } from "../services/apiClient";
-import { REDIRECT_KEY } from "../router";
+import { getRedirectTarget, clearRedirectTarget } from "../lib/authRedirect";
+import { withAppBasePath } from "../lib/basePath";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -49,15 +50,17 @@ function LoginPage() {
   const [isGithubSubmitting, setIsGithubSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  const redirectToPath = (path: string) => {
+    clearRedirectTarget();
+    globalThis.location.replace(withAppBasePath(path));
+  };
+
   // Redirect to home when authenticated
   useEffect(() => {
-    if (loading || !user) return;
-    
-    const redirectPath = sessionStorage.getItem(REDIRECT_KEY) || "/";
-    sessionStorage.removeItem(REDIRECT_KEY);
-    
-    console.log("[Login] Redirecting to:", redirectPath);
-    router.navigate({ to: redirectPath }).catch(console.error);
+    if (!user) return;
+
+    const redirectPath = getRedirectTarget("/");
+    redirectToPath(redirectPath);
   }, [loading, user, router]);
 
   const canSubmit = useMemo(
@@ -68,10 +71,10 @@ function LoginPage() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) return;
-    
+
     setIsSubmitting(true);
     setToast(null);
-    
+
     try {
       await login(email.trim(), password);
       // Redirect handled by useEffect
@@ -86,7 +89,7 @@ function LoginPage() {
     if (globalThis.history.length > 1) {
       router.history.back();
     } else {
-      router.navigate({ to: "/" }).catch(console.error);
+      redirectToPath("/");
     }
   };
 
@@ -94,7 +97,7 @@ function LoginPage() {
     if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
     setIsGoogleSubmitting(true);
     setToast(null);
-    
+
     try {
       await loginWithGoogle();
       // Page will redirect to Google, then back here
@@ -109,7 +112,7 @@ function LoginPage() {
     if (isSubmitting || isGoogleSubmitting || isGithubSubmitting) return;
     setIsGithubSubmitting(true);
     setToast(null);
-    
+
     try {
       await loginWithGithub();
       // Page will redirect to GitHub, then back here
@@ -198,7 +201,9 @@ function LoginPage() {
                   variant="ghost"
                   size="icon"
                   onClick={handleGoogleLogin}
-                  disabled={isSubmitting || isGoogleSubmitting || isGithubSubmitting}
+                  disabled={
+                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                  }
                   aria-label="Sign in with Google"
                   className="border rounded-full size-10 border-border bg-background hover:bg-muted"
                 >
@@ -209,7 +214,9 @@ function LoginPage() {
                   variant="ghost"
                   size="icon"
                   onClick={handleGithubLogin}
-                  disabled={isSubmitting || isGoogleSubmitting || isGithubSubmitting}
+                  disabled={
+                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                  }
                   aria-label="Sign in with GitHub"
                   className="border rounded-full size-10 border-border bg-background text-foreground hover:bg-muted"
                 >

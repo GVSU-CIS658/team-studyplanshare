@@ -1,7 +1,9 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "@tanstack/react-router";
+import { Editor, EditorTextChangeEvent } from "primereact/editor";
 import Layout from "../components/Layout";
 import { useAuth } from "../hooks/useAuth";
+import { getPlainTextFromHtml } from "../lib/richText";
 import { getApiErrorMessage } from "../services/apiClient";
 import {
   createStudyPlan,
@@ -76,11 +78,12 @@ function PlanFormPage() {
   }
 
   const canSubmit = useMemo(() => {
+    const descriptionText = getPlainTextFromHtml(form.description);
     return (
       form.title.trim().length > 0 &&
       form.courseName.trim().length > 0 &&
       form.semester.trim().length > 0 &&
-      form.description.trim().length > 0 &&
+      descriptionText.length > 0 &&
       !busy &&
       !loadingPlan
     );
@@ -132,6 +135,10 @@ function PlanFormPage() {
     router.navigate({ to: "/study-plans" });
   };
 
+  const onDescriptionChange = (event: EditorTextChangeEvent) => {
+    setForm((prev) => ({ ...prev, description: event.htmlValue || "" }));
+  };
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -141,7 +148,7 @@ function PlanFormPage() {
       title: form.title.trim(),
       courseName: form.courseName.trim(),
       semester: form.semester.trim(),
-      description: form.description.trim(),
+      description: form.description,
       imageUrl: form.imageUrl?.trim() || "",
       status: form.status,
     };
@@ -169,7 +176,9 @@ function PlanFormPage() {
         <ErrorToast message={error} onClose={() => setError(null)} />
         <Card>
           <CardHeader>
-            <CardTitle>{isEditing ? "Edit plan" : "Create a new plan"}</CardTitle>
+            <CardTitle>
+              {isEditing ? "Edit plan" : "Create a new plan"}
+            </CardTitle>
             <CardDescription>
               {isEditing
                 ? "Update the details of your study plan."
@@ -232,27 +241,33 @@ function PlanFormPage() {
                     ))}
                   </select>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    {statusOptions.find((option) => option.value === form.status)
-                      ?.description ?? "Only published plans are visible to everyone."}
+                    {statusOptions.find(
+                      (option) => option.value === form.status,
+                    )?.description ??
+                      "Only published plans are visible to everyone."}
                   </p>
                 </div>
 
                 <div className="rounded-lg border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-slate-700">
-                  Only plans with status <span className="font-semibold">Published</span>{" "}
-                  appear in the shared feed. Drafts and archived plans stay in your
-                  private workspace.
+                  Only plans with status{" "}
+                  <span className="font-semibold">Published</span> appear in the
+                  shared feed. Drafts and archived plans stay in your private
+                  workspace.
                 </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
-                  <textarea
+                  <Editor
                     id="description"
                     value={form.description}
-                    onChange={onChange("description")}
-                    required
-                    className="px-3 py-2 text-sm bg-transparent border rounded-md shadow-xs outline-none min-h-28 border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    placeholder="Outline weekly goals, milestones, and study resources."
+                    onTextChange={onDescriptionChange}
+                    style={{ height: "220px" }}
+                    className="sps-editor"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Add headings, bullet points, and emphasis to structure your
+                    study plan.
+                  </p>
                 </div>
 
                 <div className="grid gap-2">
