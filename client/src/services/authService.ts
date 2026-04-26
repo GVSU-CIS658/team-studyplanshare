@@ -3,10 +3,9 @@ import {
   GoogleAuthProvider,
   User,
   createUserWithEmailAndPassword,
-  getRedirectResult,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  signInWithRedirect,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -17,6 +16,7 @@ export interface AuthUser {
   uid: string;
   email: string | null;
   name?: string;
+  imageUrl?: string;
 }
 
 export function mapFirebaseUserToAuthUser(user: User): AuthUser {
@@ -24,6 +24,7 @@ export function mapFirebaseUserToAuthUser(user: User): AuthUser {
     uid: user.uid,
     email: user.email,
     name: user.displayName || undefined,
+    imageUrl: user.photoURL || undefined,
   };
 }
 
@@ -57,27 +58,16 @@ export async function loginWithEmail(email: string, password: string) {
 export async function loginWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-  await signInWithRedirect(auth, provider);
+  const result = await signInWithPopup(auth, provider);
+  return finalizeAuthenticatedUser(result.user);
 }
 
 export async function loginWithGithub() {
   const provider = new GithubAuthProvider();
   provider.addScope("read:user");
   provider.addScope("user:email");
-  await signInWithRedirect(auth, provider);
-}
-
-export async function completeRedirectAuth() {
-  try {
-    const userCredential = await getRedirectResult(auth);
-    if (userCredential?.user) {
-      return finalizeAuthenticatedUser(userCredential.user);
-    }
-    return null;
-  } catch (error) {
-    console.error("completeRedirectAuth error:", error);
-    return null;
-  }
+  const result = await signInWithPopup(auth, provider);
+  return finalizeAuthenticatedUser(result.user);
 }
 
 export async function logout() {
