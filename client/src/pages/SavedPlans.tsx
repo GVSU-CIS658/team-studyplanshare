@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Bookmark } from "lucide-react";
 
 import RichTextContent from "../components/RichTextContent";
 import Layout from "../components/Layout";
@@ -114,9 +115,16 @@ function SavedPlansPage() {
             )}
 
             {!loading && !authLoading && savedPlans.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No saved plans yet. Browse the shared feed to bookmark plans.
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Bookmark className="h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-3 text-base font-semibold text-slate-900">
+                  No saved plans
+                </h3>
+                <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                  Plans you bookmark from the shared feed will appear here for
+                  easy access.
+                </p>
+              </div>
             )}
 
             {!loading && !authLoading && savedPlans.length > 0 && (

@@ -195,11 +195,10 @@ function LoginPage() {
               <div className="pt-2 text-sm text-center text-muted-foreground">
                 <span>Or Sign Up using Social App</span>
               </div>
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex flex-col items-center gap-3">
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="outline"
                   onClick={handleGoogleLogin}
                   disabled={
                     isSubmitting || isGoogleSubmitting || isGithubSubmitting
@@ -208,11 +207,15 @@ function LoginPage() {
                   className="border rounded-full size-10 border-border bg-background hover:bg-muted"
                 >
                   <GoogleIcon />
+                  <span>
+                    {isGoogleSubmitting
+                      ? "Connecting..."
+                      : "Sign Up with Google"}
+                  </span>
                 </Button>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="default"
                   onClick={handleGithubLogin}
                   disabled={
                     isSubmitting || isGoogleSubmitting || isGithubSubmitting

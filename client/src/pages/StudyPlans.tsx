@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { ErrorToast } from "@/components/ui/error-toast";
 import { Link } from "@tanstack/react-router";
+import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { withAppBasePath } from "../lib/basePath";
@@ -222,13 +223,34 @@ function StudyPlansPage() {
             </div>
 
             {(loading || authLoading) && (
-              <p className="text-sm text-muted-foreground">Loading plans...</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[0, 1].map((i) => (
+                  <div key={i} className="animate-pulse space-y-3 rounded-lg border overflow-hidden">
+                    <div className="h-40 bg-muted" />
+                    <div className="space-y-3 p-4">
+                      <div className="h-3 w-1/3 rounded bg-muted" />
+                      <div className="h-4 w-2/3 rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {!loading && !authLoading && plans.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No plans yet. Create your first study plan!
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <BookOpen className="h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-3 text-base font-semibold text-slate-900">No plans yet</h3>
+                <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                  Get started by creating your first study plan.
+                </p>
+                <Link
+                  to="/study-plans/new"
+                  className={cn(buttonVariants({ size: "sm" }), "mt-4")}
+                >
+                  Create new plan
+                </Link>
+              </div>
             )}
 
             {!loading &&

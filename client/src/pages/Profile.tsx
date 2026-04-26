@@ -130,7 +130,16 @@ function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {loading && (
-              <p className="text-sm text-muted-foreground">Loading profile...</p>
+              <div className="animate-pulse space-y-4">
+                <div className="space-y-2">
+                  <div className="h-3 w-16 rounded bg-muted" />
+                  <div className="h-5 w-48 rounded bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-20 rounded bg-muted" />
+                  <div className="h-4 w-64 rounded bg-muted" />
+                </div>
+              </div>
             )}
 
             {!loading && profile && (

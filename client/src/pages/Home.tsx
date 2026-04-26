@@ -68,12 +68,18 @@ function HomePage() {
     onReload: loadPlans,
   });
 
-  const { savedPlanMap, savingPlanId, loadSavedPlans, toggleSave, isSaved, isSaving } =
-    useSavedPlans({
-      userId: user?.uid,
-      onRequireAuth: () => router.navigate({ to: "/login" }),
-      onError: clearError,
-    });
+  const {
+    savedPlanMap,
+    savingPlanId,
+    loadSavedPlans,
+    toggleSave,
+    isSaved,
+    isSaving,
+  } = useSavedPlans({
+    userId: user?.uid,
+    onRequireAuth: () => router.navigate({ to: "/login" }),
+    onError: clearError,
+  });
 
   const firstName =
     formatWelcomeName(user?.name) ||
@@ -97,8 +103,10 @@ function HomePage() {
   };
 
   const hasPlans = !loading && displayedPlans.length > 0;
-  const showEmptyState = !loading && displayedPlans.length === 0 && search.trim() === "";
-  const showNoResults = !loading && displayedPlans.length === 0 && search.trim() !== "";
+  const showEmptyState =
+    !loading && displayedPlans.length === 0 && search.trim() === "";
+  const showNoResults =
+    !loading && displayedPlans.length === 0 && search.trim() !== "";
 
   return (
     <Layout>
@@ -129,7 +137,9 @@ function HomePage() {
                 <>
                   <Link
                     to="/study-plans"
-                    className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
+                    className={
+                      buttonVariants({ size: "lg" }) + " w-full sm:w-auto"
+                    }
                   >
                     My study plans
                     <ArrowRight className="w-4 h-4" />
@@ -148,7 +158,9 @@ function HomePage() {
               ) : (
                 <Link
                   to="/login"
-                  className={buttonVariants({ size: "lg" }) + " w-full sm:w-auto"}
+                  className={
+                    buttonVariants({ size: "lg" }) + " w-full sm:w-auto"
+                  }
                 >
                   Sign in to get started
                   <ArrowRight className="w-4 h-4" />
@@ -181,11 +193,22 @@ function HomePage() {
         </div>
 
         {(loading || authLoading) && (
-          <Card>
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              Loading shared study plans...
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse space-y-3 rounded-lg border border-border/70 p-0 overflow-hidden"
+              >
+                <div className="h-44 sm:h-52 lg:h-56 bg-muted" />
+                <div className="space-y-3 p-5">
+                  <div className="h-3 w-1/3 rounded bg-muted" />
+                  <div className="h-5 w-2/3 rounded bg-muted" />
+                  <div className="h-4 w-full rounded bg-muted" />
+                  <div className="h-4 w-4/5 rounded bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {showEmptyState && (
@@ -213,7 +236,10 @@ function HomePage() {
               const saving = isSaving(plan.id);
 
               return (
-                <Card key={plan.id} className="overflow-hidden border-border/70">
+                <Card
+                  key={plan.id}
+                  className="overflow-hidden border-border/70"
+                >
                   <div className="flex flex-col h-full">
                     <img
                       src={plan.imageUrl || DEFAULT_PLAN_IMAGE}
@@ -328,7 +354,9 @@ function HomePage() {
                             disabled={saving}
                             onClick={() => toggleSave(plan.id)}
                             className="w-8 h-8"
-                            style={saved ? { backgroundColor: "#2563eb" } : undefined}
+                            style={
+                              saved ? { backgroundColor: "#2563eb" } : undefined
+                            }
                           >
                             {saved ? (
                               <BookmarkCheck className="w-4 h-4 text-white" />
