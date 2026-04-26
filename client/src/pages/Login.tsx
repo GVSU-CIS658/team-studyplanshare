@@ -196,45 +196,6 @@ function LoginPage() {
               >
                 {isSubmitting ? "Logging in..." : "Login"}
               </Button>
-              <div className="pt-2 text-sm text-center text-muted-foreground">
-                <span>Or sign in using social app</span>
-              </div>
-              <div className="flex flex-col items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGoogleLogin}
-                  disabled={
-                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
-                  }
-                  aria-label="Sign in with Google"
-                  className="w-full gap-2 rounded-full border border-border bg-background hover:bg-muted"
-                >
-                  <GoogleIcon />
-                  <span>
-                    {isGoogleSubmitting
-                      ? "Connecting..."
-                      : "Sign in with Google"}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGithubLogin}
-                  disabled={
-                    isSubmitting || isGoogleSubmitting || isGithubSubmitting
-                  }
-                  aria-label="Sign in with GitHub"
-                  className="w-full gap-2 rounded-full border border-border bg-background text-foreground hover:bg-muted"
-                >
-                  <Github className="w-5 h-5" />
-                  <span>
-                    {isGithubSubmitting
-                      ? "Connecting..."
-                      : "Sign in with GitHub"}
-                  </span>
-                </Button>
-              </div>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col items-center gap-2 px-6 pt-2 pb-6">
@@ -250,6 +211,45 @@ function LoginPage() {
             >
               Sign up
             </Link>
+            <div className="pt-2 text-sm text-center text-muted-foreground">
+              <span>Or sign in using social app</span>
+            </div>
+            <div className="flex flex-col w-full items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGoogleLogin}
+                disabled={
+                  isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                }
+                aria-label="Sign in with Google"
+                className="w-full gap-2 rounded-full border border-border bg-background hover:bg-muted"
+              >
+                <GoogleIcon />
+                <span>
+                  {isGoogleSubmitting
+                    ? "Connecting..."
+                    : "Sign in with Google"}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGithubLogin}
+                disabled={
+                  isSubmitting || isGoogleSubmitting || isGithubSubmitting
+                }
+                aria-label="Sign in with GitHub"
+                className="w-full gap-2 rounded-full border border-border bg-background text-foreground hover:bg-muted"
+              >
+                <Github className="w-5 h-5" />
+                <span>
+                  {isGithubSubmitting
+                    ? "Connecting..."
+                    : "Sign in with GitHub"}
+                </span>
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </section>
