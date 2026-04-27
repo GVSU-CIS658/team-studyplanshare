@@ -1,6 +1,12 @@
 import { useRouter, Link } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import {
+  Bookmark,
+  House,
+  LogIn,
+  LogOut,
+  NotebookText,
+  UserRound,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import Avatar from "./ui/avatar";
 import { Button, buttonVariants } from "./ui/button";
@@ -24,7 +30,6 @@ const navLinks = [
 export default function Layout({ children }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = router.state.location.pathname;
   const isAuthScreen =
     pathname === "/login" ||
@@ -72,16 +77,71 @@ export default function Layout({ children }) {
     return null;
   })();
 
+  const mobileLinks = [
+    { to: "/", label: "Home", icon: House },
+    { to: "/study-plans", label: "Plans", icon: NotebookText },
+    { to: "/saved-plans", label: "Saved", icon: Bookmark },
+  ];
+
+  const mobileAuthControls = (() => {
+    if (loading || isAuthScreen || !user) {
+      return (
+        <Link
+          to="/login"
+          className="flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <LogIn className="h-5 w-5" />
+          <span>Sign In</span>
+        </Link>
+      );
+    }
+
+    return (
+      <>
+        <Link
+          to="/profile"
+          className="flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <UserRound className="h-5 w-5" />
+          <span>Profile</span>
+        </Link>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Logout</span>
+        </button>
+      </>
+    );
+  })();
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 w-full border-b border-border bg-white/90 backdrop-blur dark:bg-background/90">
         <div className="flex items-center justify-between w-full max-w-6xl gap-4 px-4 py-4 mx-auto sm:px-6">
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <svg className="w-6 h-6 shrink-0" viewBox="0 0 32 32" aria-hidden="true">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-lg font-bold tracking-tight"
+          >
+            <svg
+              className="w-6 h-6 shrink-0"
+              viewBox="0 0 32 32"
+              aria-hidden="true"
+            >
               <rect width="32" height="32" rx="6" fill="#4f46e5" />
-              <path d="M7 8a2 2 0 0 1 2-2h6l1 2h7a2 2 0 0 1 2 2v4H7V8z" fill="#a5b4fc" />
+              <path
+                d="M7 8a2 2 0 0 1 2-2h6l1 2h7a2 2 0 0 1 2 2v4H7V8z"
+                fill="#a5b4fc"
+              />
               <rect x="7" y="13" width="18" height="13" rx="1" fill="#e0e7ff" />
-              <path d="M11 17h10M11 20h7" stroke="#4f46e5" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M11 17h10M11 20h7"
+                stroke="#4f46e5"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             StudyPlanShare
           </Link>
@@ -98,62 +158,35 @@ export default function Layout({ children }) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            {authControls}
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-          </div>
+          <div className="flex items-center gap-2">{authControls}</div>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <>
-          <button
-            type="button"
-            aria-label="Close mobile menu"
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <div className="fixed top-0 right-0 z-50 w-64 h-full bg-white border-l dark:bg-background border-border md:hidden">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <span className="font-semibold">Menu</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <nav className="flex flex-col p-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={buttonVariants({
-                    variant: "ghost",
-                    size: "sm",
-                    className: "justify-start",
-                  })}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </>
-      )}
+      <nav
+        aria-label="Mobile navigation"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-3 py-2 backdrop-blur md:hidden dark:bg-background/95"
+      >
+        <div className="mx-auto grid max-w-6xl grid-cols-5 gap-1">
+          {mobileLinks.map((link) => {
+            const Icon = link.icon;
 
-      <main className="flex-1 w-full max-w-6xl px-4 py-6 mx-auto sm:px-6 sm:py-8">
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Icon className="h-5 w-5" />
+                <span>{link.label}</span>
+              </Link>
+            );
+          })}
+
+          {mobileAuthControls}
+        </div>
+      </nav>
+
+      <main className="flex-1 w-full max-w-6xl px-4 py-6 pb-24 mx-auto sm:px-6 sm:py-8 md:pb-8">
         {children}
       </main>
 

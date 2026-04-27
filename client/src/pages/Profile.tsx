@@ -8,6 +8,7 @@ import {
   updateUserProfile,
   type UserProfile,
 } from "../services/userService";
+import { ensureUserRecord } from "../services/userService";
 import { Button } from "@/components/ui/button";
 import { ErrorToast } from "@/components/ui/error-toast";
 import {
@@ -62,6 +63,10 @@ function ProfilePage() {
       setError(null);
 
       try {
+        // Ensure there is a corresponding user record in the backend
+        // (this is idempotent: endpoint creates the record if missing)
+        await ensureUserRecord();
+
         const data = await getUserProfile();
         setProfile(data);
         setDraft({
@@ -120,24 +125,22 @@ function ProfilePage() {
   return (
     <Layout>
       <ErrorToast message={error} onClose={() => setError(null)} />
-      <section className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <section className="flex flex-col w-full max-w-2xl gap-6 mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
-            <CardDescription>
-              Basic student information.
-            </CardDescription>
+            <CardDescription>Basic student information.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {loading && (
-              <div className="animate-pulse space-y-4">
+              <div className="space-y-4 animate-pulse">
                 <div className="space-y-2">
-                  <div className="h-3 w-16 rounded bg-muted" />
-                  <div className="h-5 w-48 rounded bg-muted" />
+                  <div className="w-16 h-3 rounded bg-muted" />
+                  <div className="w-48 h-5 rounded bg-muted" />
                 </div>
                 <div className="space-y-2">
-                  <div className="h-3 w-20 rounded bg-muted" />
-                  <div className="h-4 w-64 rounded bg-muted" />
+                  <div className="w-20 h-3 rounded bg-muted" />
+                  <div className="w-64 h-4 rounded bg-muted" />
                 </div>
               </div>
             )}
@@ -149,14 +152,6 @@ function ProfilePage() {
                     Email
                   </p>
                   <p className="text-base font-medium">{profile.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Account ID
-                  </p>
-                  <p className="text-sm break-all text-muted-foreground">
-                    {profile.id}
-                  </p>
                 </div>
               </div>
             )}
@@ -230,7 +225,7 @@ function ProfilePage() {
                 id="bio"
                 value={draft.bio}
                 onChange={onChange("bio")}
-                className="min-h-28 rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="px-3 py-2 text-sm bg-transparent border rounded-md outline-none min-h-28 border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 placeholder="Share a little about your focus, interests, or study style."
               />
             </div>
